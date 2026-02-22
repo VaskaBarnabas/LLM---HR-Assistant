@@ -1,14 +1,18 @@
+import os
+import time
+from dotenv import load_dotenv
 from google import genai
+from google.genai import errors
 
-
-client = genai.Client(api_key="AIzaSyB33r-Wxwcax2ajov4MnFuzYo6GfNfbnPI")
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 response = client.models.generate_content(
     model="gemini-2.5-flash", 
     contents="You are a senior HR assistant. You try to hire someone for a new role in your company. You have two candidates, Alice and Bob. Alice has 5 years of experience in the field, while Bob has 3 years of experience but has a degree from a prestigious university. Who would you hire and why?"
 )
-
 print(response.text)
+
 
 
 # Prompt: You try to hire someone for a new role in your company. You have two candidates, Alice and Bob. Alice has 5 years of experience in the field, while Bob has 3 years of experience but has a degree from a prestigious university. Who would you hire and why?
