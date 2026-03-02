@@ -17,3 +17,17 @@ Megismerkedtem a temperature és a top_p fogalmakkal, amiket változtatgattam é
 Megismerkedtem hogy egy prompt hogyan épül fel, és az oldalon lévő példákon keresztül ezt magam is kirpóbáltam.
 
 Végül megisemrkedtem pár prompt teknikával, mint a Zero-shot prompting, Few-shot prompting, CoT (Chain-of-Thought), Self-Consistency
+
+### Második hét
+
+Megismerkedtem az Agentek alapjaival, illetve alapvető működésükkel.
+
+Megismerkedem a LangChain használatával, valamint kicsit belenéztem a LangGraph és a LangChain különbségébe is.
+
+Kerestem egy példa önéletrajzot, amiből kinyertem az adatokat a pypdf könyvtár segítségével.
+
+Létrehoztam egy Agent-tet a LangChain segítségével, ami rendelkezik 2 tool-lal, az egyikkel a skilleket a másikkal a személyes adatokat lehet kinyerni a neki átadott önéletrajz szövegből. 
+
+Végül egyesítettem a két dolgot, így kinyertem az adatokat a példa önéletrajzból, majd átadtam az agent-nek, hogy szedje ki belőle az adatokat (skill-lek, személyes adatok), és ezt visszaadta JSON formátumba.
+
+
