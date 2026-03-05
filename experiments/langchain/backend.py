@@ -31,7 +31,6 @@ async def analyze(files: list[UploadFile] = File(...)):
             tmp_paths.append(tmp.name)
 
         candidates = analyze_pdf_paths(tmp_paths)
-        print("LLM raw output:", candidates)  # debug
 
         result = []
         for i, c in enumerate(candidates):
