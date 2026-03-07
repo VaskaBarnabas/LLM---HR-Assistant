@@ -7,19 +7,23 @@ collection = chroma_client.get_or_create_collection(name="cv_collection")
 
 cv1_text = extract_pdf_text("example1.pdf")
 cv2_text = extract_pdf_text("example2.pdf")
+cv3_text= extract_pdf_text("example3.pdf")
 
 collection.add(
-    ids=["id1", "id2"],
+    ids=["id1", "id2", "id3"],
     documents=[
         cv1_text,
-        cv2_text
+        cv2_text,
+        cv3_text
     ]
 )
 
 results = collection.query(
-    query_texts=["Find the best candidate for Java developer position"], # Chroma will embed this for you
-    n_results=1 # how many results to return
+    query_texts=["Find the best candidate for Java developer"], # Chroma will embed this for you
+    n_results=3 # how many results to return
 )
+
+#print(results)
 doc_id   = results["ids"][0][0]
 distance = results["distances"][0][0]
 document = results["documents"][0][0]
