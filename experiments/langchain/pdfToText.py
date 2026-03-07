@@ -1,9 +1,19 @@
+import re
 from pathlib import Path
 from annotated_types import doc
 from langchain_community.document_loaders import FileSystemBlobLoader
 from langchain_community.document_loaders.generic import GenericLoader
 from langchain_community.document_loaders.parsers import PyPDFParser
 from pypdf import PdfReader
+
+
+def _fix_spaced_chars(text):
+    """Collapse 'H e l l o' → 'Hello' caused by certain PDF font encodings."""
+    return re.sub(
+        r'(?<!\w)([A-Za-zÀ-ÿ\d] )+[A-Za-zÀ-ÿ\d](?!\w)',
+        lambda m: m.group().replace(' ', ''),
+        text
+    )
 
 loader = GenericLoader(
     blob_loader=FileSystemBlobLoader(
@@ -28,5 +38,5 @@ def extract_pdf_text(pdf_name):
         for page in reader.pages:
             text = page.extract_text()
             ptdf_text += text
-        
-    return ptdf_text
+
+    return _fix_spaced_chars(ptdf_text)
