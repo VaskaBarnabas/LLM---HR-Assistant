@@ -8,31 +8,37 @@ collection = chroma_client.get_or_create_collection(name="cv_collection")
 cv1_text = extract_pdf_text("example1.pdf")
 cv2_text = extract_pdf_text("example2.pdf")
 cv3_text= extract_pdf_text("example3.pdf")
+cv4_text = extract_pdf_text("example4.pdf")
 
-collection.add(
-    ids=["id1", "id2", "id3"],
+collection.upsert(
+    ids=["id1", "id2", "id3", "id4"],
     documents=[
         cv1_text,
         cv2_text,
-        cv3_text
+        cv3_text,
+        cv4_text
     ]
 )
 
 results = collection.query(
-    query_texts=["Find the best candidate for Java developer"], # Chroma will embed this for you
-    n_results=3 # how many results to return
+    query_texts=["JavaScript React HTML CSS frontend web development"],
+    n_results=1
 )
 
-#print(results)
-doc_id   = results["ids"][0][0]
-distance = results["distances"][0][0]
-document = results["documents"][0][0]
+ids       = results["ids"][0]
+distances = results["distances"][0]
+documents = results["documents"][0]
 
 print("\n" + "=" * 60)
-print("  BEST MATCH")
+print("RESULTS")
 print("=" * 60)
-print(f"  ID: {doc_id}  |  Distance: {distance:.4f}")
-print("-" * 60)
-preview = document[:500].replace("\n", " ")
-print(f"  {preview}{'...' if len(document) > 500 else ''}")
+
+for rank, (doc_id, distance, document) in enumerate(zip(ids, distances, documents), start=1):
+    print(f"\n  #{rank}  ID: {doc_id}  |  Distance: {distance:.4f}")
+    print("-" * 60)
+    preview = document[:400].replace("\n", " ")
+    print(f"  {preview}{'...' if len(document) > 400 else ''}")
+
+print("\n" + "=" * 60)
+print(f"  BEST MATCH: {ids[0]}")
 print("=" * 60)
