@@ -31,3 +31,13 @@ Létrehoztam egy Agent-tet a LangChain segítségével, ami rendelkezik 2 tool-l
 Végül egyesítettem a két dolgot, így kinyertem az adatokat a példa önéletrajzból, majd átadtam az agent-nek, hogy szedje ki belőle az adatokat (skill-lek, személyes adatok), és ezt visszaadta JSON formátumba.
 
 
+### Harmadik hét
+Átírtam a Langchain workflow-t, mivel úgy itéltem meg hogy erre egy külön agentet létrehozni felesleges egyenlőre, így egy Langchain-ben használatos chain-t csináltam, ami egymás után meghívja a megfelelő dolgokat.
+
+Módosítottam a PDF feldolgozón, mivel az eredetiben sok karakter után rakott egy felesleges szóközt, ami a későbbi vektor adatbázisnál problémát jelentett.
+
+Készítettem egy nagyon minimális UI-t, ahol a felhasználónak lehetősége van feltölteni önéletrajzokat, amit utána a backend feldolgoz (kiszedi a személyes infókat és a skill-eket), majd pedig létrehoz jelentkezőkből kártáykat az adataikkal és a skill-jeikkel. Ehhez az eddig megírt PDF feldolgozó workflow-t használtam.
+
+Megismerkedtem az embedding fogalmával, valamint a RAG fogalmával is.
+
+Kipróbáltam a ChromaDB vektor adatbázist, amit lokálisan dockerben futtattam, feltöltöttem pár önéletrajzot és különböző query-k segítségével teszteltem mire milyen választ ad vissza. (Itt probléma lehet ha több nyelvű önéletrajzok lesznek tárolva)
