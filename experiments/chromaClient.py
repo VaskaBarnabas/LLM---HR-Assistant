@@ -1,9 +1,17 @@
+import os
 import chromadb
+from dotenv import load_dotenv
 from experiments.langchain.pdfToText import extract_pdf_text
+import chromadb.utils.embedding_functions as embedding_functions
+
+load_dotenv()
+cohere_ef = embedding_functions.CohereEmbeddingFunction(api_key=os.getenv("COHERE_API_KEY"), model_name="embed-multilingual-light-v3.0")
 
 chroma_client = chromadb.HttpClient(host="localhost", port=8000)
 
-collection = chroma_client.get_or_create_collection(name="cv_collection")
+chroma_client.delete_collection(name="cv_collection")
+collection = chroma_client.create_collection(name="cv_collection",
+                                             embedding_function=cohere_ef)
 
 cv1_text = extract_pdf_text("example1.pdf")
 cv2_text = extract_pdf_text("example2.pdf")
