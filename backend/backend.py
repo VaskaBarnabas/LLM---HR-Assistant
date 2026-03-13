@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
-from hr_workflow import analyze_pdf_paths
+from backend.workflow import chain
 
 app = FastAPI()
 
@@ -30,7 +30,8 @@ async def analyze(files: list[UploadFile] = File(...)):
             tmp.close()
             tmp_paths.append(tmp.name)
 
-        candidates = analyze_pdf_paths(tmp_paths)
+        result_state = chain.invoke({"paths": tmp_paths, "texts": [], "candidates": []})
+        candidates = result_state["candidates"]
 
         result = []
         for i, c in enumerate(candidates):
