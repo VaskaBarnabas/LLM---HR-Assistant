@@ -1,13 +1,14 @@
 import os
 import uuid
 import chromadb
+from pathlib import Path
 from dotenv import load_dotenv
 import chromadb.utils.embedding_functions as embedding_functions
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 cohere_ef = embedding_functions.CohereEmbeddingFunction(
-    api_key=os.getenv("COHERE_API_KEY"),
+    api_key=os.getenv("CHROMA_COHERE_API_KEY"),
     model_name="embed-multilingual-light-v3.0"
 )
 
