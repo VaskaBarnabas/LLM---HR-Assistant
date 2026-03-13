@@ -9,7 +9,6 @@ cohere_ef = embedding_functions.CohereEmbeddingFunction(api_key=os.getenv("COHER
 
 chroma_client = chromadb.HttpClient(host="localhost", port=8000)
 
-chroma_client.delete_collection(name="cv_collection")
 collection = chroma_client.create_collection(name="cv_collection",
                                              embedding_function=cohere_ef)
 
@@ -29,7 +28,7 @@ collection.upsert(
 )
 
 results = collection.query(
-    query_texts=["JavaScript React HTML CSS frontend web development"],
+    query_texts=["Sales strategist, sales operations, sales enablement, sales process optimization, sales performance improvement"],
     n_results=1
 )
 
