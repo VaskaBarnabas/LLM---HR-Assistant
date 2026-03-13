@@ -21,7 +21,11 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [chatQuery, setChatQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasCandidates = candidates.length > 0;
+  const hasStaged = stagedFiles.length > 0;
 
   const filtered = candidates.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -34,14 +38,12 @@ export default function Home() {
     if (pdfs.length === 0) return;
     setStagedFiles(prev => {
       const existingNames = new Set(prev.map(f => f.name));
-      const newFiles = pdfs.filter(f => !existingNames.has(f.name));
-      return [...prev, ...newFiles];
+      return [...prev, ...pdfs.filter(f => !existingNames.has(f.name))];
     });
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
   const handleDragLeave = useCallback(() => setIsDragging(false), []);
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -53,12 +55,10 @@ export default function Home() {
     e.target.value = '';
   }, [stageFiles]);
 
-  const removeFile = (name: string) => {
-    setStagedFiles(prev => prev.filter(f => f.name !== name));
-  };
+  const removeFile = (name: string) => setStagedFiles(prev => prev.filter(f => f.name !== name));
 
   const analyze = async () => {
-    if (stagedFiles.length === 0) return;
+    if (!hasStaged) return;
     setIsProcessing(true);
     try {
       const formData = new FormData();
@@ -76,19 +76,29 @@ export default function Home() {
     }
   };
 
-  const hasCandidates = candidates.length > 0;
+  const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      // future: send chat query
+    }
+  };
+
+  // Phase 1: no files anywhere
+  const phase = !hasStaged && !hasCandidates ? 1
+    : hasStaged && !hasCandidates ? 2
+    : 2.5; // hasStaged + hasCandidates, or just hasCandidates
 
   return (
     <>
       {/* Header */}
       <header className="site-header">
         <div className="header-inner">
-          <span className="brand">HR Analysis</span>
+          <span className="brand">HR Assistant</span>
           {hasCandidates && (
             <div className="header-search">
               <input
                 type="text"
-                placeholder="Search candidates or skills..."
+                placeholder="Search by name, skill or location…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="search-input"
@@ -96,69 +106,74 @@ export default function Home() {
             </div>
           )}
           <div className="header-right">
-            {hasCandidates && <span className="candidate-count">{candidates.length} candidates</span>}
-            <button className="btn-upload" onClick={() => fileInputRef.current?.click()}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              Upload CVs
-            </button>
+            {hasCandidates && <span className="candidate-count">{candidates.length} candidate{candidates.length !== 1 ? 's' : ''}</span>}
+            {hasCandidates && (
+              <button className="btn-upload" onClick={() => fileInputRef.current?.click()}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Add more CVs
+              </button>
+            )}
             <input ref={fileInputRef} type="file" accept=".pdf" multiple onChange={handleFileInput} className="hidden" />
           </div>
         </div>
       </header>
 
-      {/* Main */}
       <main
         className="site-main"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {/* Drop zone — always visible */}
-        <div
-          className={`upload-zone${isDragging ? ' dragging' : ''}`}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <div className="upload-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/>
-              <line x1="9" y1="15" x2="15" y2="15"/>
-            </svg>
-          </div>
-          <p className="upload-label">Drag & drop CV files here</p>
-          <p className="upload-sublabel">PDF format · multiple files supported</p>
-        </div>
 
-        {/* Staged files grid */}
-        {stagedFiles.length > 0 && (
+        {/* ── PHASE 1: Empty state — upload prompt ── */}
+        {phase === 1 && (
+          <div className="empty-phase">
+            <div className="empty-headline">Analyze CV files with AI</div>
+            <div className="empty-sub">Upload one or more PDF CVs to extract skills, contact info and more.</div>
+            <div
+              className={`upload-zone${isDragging ? ' dragging' : ''}`}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="upload-zone-icon">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+              <p className="upload-zone-label">{isDragging ? 'Drop your CVs here' : 'Drop CV files here'}</p>
+              <p className="upload-zone-sub">or <span className="upload-zone-link">click to browse</span> · PDF · multiple files</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── PHASE 2: Files staged — review & analyze ── */}
+        {hasStaged && (
           <div className="staged-section">
             <div className="staged-header">
-              <span className="section-title">
-                Uploaded CVs
-                <span className="section-count" style={{ marginLeft: '0.5rem' }}>{stagedFiles.length} file{stagedFiles.length !== 1 ? 's' : ''}</span>
-              </span>
+              <div>
+                <div className="section-title">Ready to analyze</div>
+                <div className="section-sub">{stagedFiles.length} file{stagedFiles.length !== 1 ? 's' : ''} selected · click Analyze to continue</div>
+              </div>
+              <button className="btn-ghost-sm" onClick={() => fileInputRef.current?.click()}>
+                + Add more
+              </button>
             </div>
             <div className="staged-grid">
               {stagedFiles.map(file => (
                 <div key={file.name} className="staged-card">
                   <div className="staged-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                       <polyline points="14 2 14 8 20 8"/>
                     </svg>
                   </div>
                   <div className="staged-name">{file.name}</div>
                   <div className="staged-size">{(file.size / 1024).toFixed(0)} KB</div>
-                  <button
-                    className="staged-remove"
-                    onClick={() => removeFile(file.name)}
-                    aria-label="Remove file"
-                  >
+                  <button className="staged-remove" onClick={() => removeFile(file.name)} aria-label="Remove">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
@@ -166,38 +181,30 @@ export default function Home() {
                 </div>
               ))}
             </div>
+
+            <div className="analyze-bar">
+              <button className="btn-analyze" onClick={analyze} disabled={isProcessing}>
+                {isProcessing ? (
+                  <><div className="processing-spinner small" />Analyzing…</>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Analyze {stagedFiles.length} CV{stagedFiles.length !== 1 ? 's' : ''}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Analyze button — always visible, disabled until files are staged */}
-        <div className="analyze-bar">
-          <button
-            className="btn-analyze"
-            onClick={analyze}
-            disabled={stagedFiles.length === 0 || isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <div className="processing-spinner small" />
-                Analyzing…
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                Analyze CVs
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Candidates bento grid */}
+        {/* ── PHASE 3: Candidates + chat ── */}
         {hasCandidates && (
           <>
             <div className="section-header">
               <span className="section-title">Candidates</span>
-              <span className="section-count">{filtered.length} results</span>
+              <span className="section-count">{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
             </div>
             <div className="bento-grid">
               {filtered.map((c, i) => (
@@ -212,6 +219,21 @@ export default function Home() {
               {filtered.length === 0 && (
                 <div className="empty-state">No candidates match your search.</div>
               )}
+            </div>
+
+            {/* Chat input */}
+            <div className="chat-section">
+              <div className="chat-section-label">Ask a question about these candidates</div>
+              <div className={`chat-box${isDragging ? ' dragging' : ''}`}>
+                <textarea
+                  className="chat-textarea"
+                  placeholder="e.g. Who has the most React experience? Who speaks German?"
+                  value={chatQuery}
+                  onChange={e => setChatQuery(e.target.value)}
+                  onKeyDown={handleChatKeyDown}
+                  rows={3}
+                />
+              </div>
             </div>
           </>
         )}
@@ -230,18 +252,9 @@ export default function Home() {
 
             <div className="sheet-section">
               <div className="sheet-section-label">Contact</div>
-              <div className="detail-row">
-                <div className="detail-key">Email</div>
-                <div className="detail-val">{selected.email}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-key">Phone</div>
-                <div className="detail-val">{selected.phone}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-key">Location</div>
-                <div className="detail-val">{selected.location}</div>
-              </div>
+              <div className="detail-row"><div className="detail-key">Email</div><div className="detail-val">{selected.email}</div></div>
+              <div className="detail-row"><div className="detail-key">Phone</div><div className="detail-val">{selected.phone}</div></div>
+              <div className="detail-row"><div className="detail-key">Location</div><div className="detail-val">{selected.location}</div></div>
             </div>
 
             <div className="sheet-section">
@@ -267,10 +280,7 @@ export default function Home() {
 }
 
 function CandidateCard({ candidate, index, isSelected, onClick }: {
-  candidate: Candidate;
-  index: number;
-  isSelected: boolean;
-  onClick: () => void;
+  candidate: Candidate; index: number; isSelected: boolean; onClick: () => void;
 }) {
   return (
     <div
