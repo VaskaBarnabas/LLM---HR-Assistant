@@ -210,11 +210,12 @@ body {
 
 /* ── CHAT BOX ──────────────────────────── */
 .chat-box {
+  position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 4px;
-  margin-bottom: 32px;
+  margin-bottom: 0;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-shadow: var(--shadow-sm);
 }
@@ -232,7 +233,7 @@ body {
   background: transparent;
   border: none;
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 14px 54px 14px 16px;
   font-family: var(--font);
   font-size: 14px;
   color: var(--text);
@@ -251,6 +252,62 @@ body {
   align-items: center;
   padding: 6px 10px 8px;
   gap: 8px;
+}
+
+.chat-send-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chat-send-btn:hover:not(:disabled) { background: var(--accent-hover); }
+.chat-send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.chat-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.chat-result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+  animation: fadeUp 0.2s ease both;
+}
+
+.chat-result-index {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 6px;
+  padding: 2px 7px;
+  height: fit-content;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chat-result-text {
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
 .btn-attach {

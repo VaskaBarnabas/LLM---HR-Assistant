@@ -22,6 +22,8 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [chatQuery, setChatQuery] = useState('');
+  const [chatResults, setChatResults] = useState<{ id: string; distance: number; document: string }[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasCandidates = candidates.length > 0;
@@ -76,10 +78,29 @@ export default function Home() {
     }
   };
 
+  const sendChatQuery = async () => {
+    if (!chatQuery.trim() || isChatLoading) return;
+    setIsChatLoading(true);
+    setChatResults([]);
+    try {
+      const res = await fetch('/api/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: chatQuery.trim(), n_results: 3 }),
+      });
+      const data = await res.json();
+      if (data.results) setChatResults(data.results);
+    } catch {
+      // API not connected
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      // future: send chat query
+      sendChatQuery();
     }
   };
 
@@ -233,7 +254,31 @@ export default function Home() {
                   onKeyDown={handleChatKeyDown}
                   rows={3}
                 />
+                <button
+                  className="chat-send-btn"
+                  onClick={sendChatQuery}
+                  disabled={isChatLoading || !chatQuery.trim()}
+                  aria-label="Send"
+                >
+                  {isChatLoading ? (
+                    <div className="processing-spinner small" />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  )}
+                </button>
               </div>
+              {chatResults.length > 0 && (
+                <div className="chat-results">
+                  {chatResults.map((r, i) => (
+                    <div key={r.id} className="chat-result-card">
+                      <div className="chat-result-index">#{i + 1}</div>
+                      <div className="chat-result-text">{r.document}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
