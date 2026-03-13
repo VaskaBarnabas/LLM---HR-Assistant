@@ -21,9 +21,14 @@ collection = chroma_client.get_or_create_collection(
 
 
 def add_documents(texts: list[str]) -> None:
-    """Add a list of text documents to the collection."""
-    ids = [str(uuid.uuid4()) for _ in texts]
-    collection.upsert(ids=ids, documents=texts)
+    """Add documents to the collection, skipping any that are already stored."""
+    existing = collection.get()["documents"] or []
+    existing_set = set(existing)
+    new_texts = [t for t in texts if t not in existing_set]
+    if not new_texts:
+        return
+    ids = [str(uuid.uuid4()) for _ in new_texts]
+    collection.upsert(ids=ids, documents=new_texts)
 
 
 def query(query_text: str, n_results: int = 1) -> list[dict]:
