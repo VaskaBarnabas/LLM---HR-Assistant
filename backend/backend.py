@@ -5,8 +5,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from backend.workflow import chain
+from backend.chromaClient import query as chroma_query
 
 app = FastAPI()
 
@@ -75,6 +77,17 @@ async def analyze(files: list[UploadFile] = File(...)):
                 os.unlink(path)
             except OSError:
                 pass
+
+
+class QueryRequest(BaseModel):
+    query: str
+    n_results: int = 3
+
+
+@app.post("/query")
+async def query_cvs(body: QueryRequest):
+    results = chroma_query(body.query, body.n_results)
+    return {"results": results}
 
 
 if __name__ == "__main__":
