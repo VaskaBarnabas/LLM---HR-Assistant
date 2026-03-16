@@ -1,10 +1,61 @@
+# Futtatás
+
+### Előfeltételek
+- Python 3.12
+- Node.js 18+
+- Docker
+
+### 1. Környezeti változók beállítása
+
+`backend/.env`:
+```
+GEMINI_API_KEY=...
+CHROMA_COHERE_API_KEY=...
+```
+
+`frontend/.env.local`:
+```
+BACKEND_URL=http://localhost:8001
+```
+
+### 2. Python virtuális környezet és függőségek
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install chromadb cohere fastapi uvicorn python-multipart langchain-community langchain-google-genai langgraph pypdf pillow python-dotenv
+```
+
+### 3. ChromaDB indítása (Docker)
+
+```bash
+docker run -p 8000:8000 chromadb/chroma:1.0.0
+```
+
+### 4. Python backend indítása
+
+A projekt gyökeréből (`LLM---HR-Assistant`):
+```bash
+uvicorn backend.backend:app --port 8001 --reload
+```
+
+### 5. Next.js frontend indítása
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Az alkalmazás ezután elérhető: `http://localhost:3000`
+
+
 # Haladások
 
-### Első hét
+### 1. hét
 A megbeszéltek szerint, a következőkkel haladtam a héten:
 
 Létrehoztam egy Github repot, amiben a félév során minden munkám ide fog kerülni. Ezen belül létrehoztam 2 ágat, a main illetve a develop branch-et. A main ág lesz fogja tartalmazni a "release"-eket. A develop branch-ből ágaznak el a feature branch-ek, amiket majd ide merge-elek vissza, amint elkészül az adott feature.
-
 
 Regisztráltam a Google Gemini API-ra, és legenráltam egy api kulcsot.
 
@@ -18,7 +69,7 @@ Megismerkedtem hogy egy prompt hogyan épül fel, és az oldalon lévő példák
 
 Végül megisemrkedtem pár prompt teknikával, mint a Zero-shot prompting, Few-shot prompting, CoT (Chain-of-Thought), Self-Consistency
 
-### Második hét
+### 2. hét
 
 Megismerkedtem az Agentek alapjaival, illetve alapvető működésükkel.
 
@@ -31,7 +82,8 @@ Létrehoztam egy Agent-tet a LangChain segítségével, ami rendelkezik 2 tool-l
 Végül egyesítettem a két dolgot, így kinyertem az adatokat a példa önéletrajzból, majd átadtam az agent-nek, hogy szedje ki belőle az adatokat (skill-lek, személyes adatok), és ezt visszaadta JSON formátumba.
 
 
-### Harmadik hét
+### 3. hét
+
 Átírtam a Langchain workflow-t, mivel úgy itéltem meg hogy erre egy külön agentet létrehozni felesleges egyenlőre, így egy Langchain-ben használatos chain-t csináltam, ami egymás után meghívja a megfelelő dolgokat.
 
 Módosítottam a PDF feldolgozón, mivel az eredetiben sok karakter után rakott egy felesleges szóközt, ami a későbbi vektor adatbázisnál problémát jelentett.
@@ -41,3 +93,27 @@ Készítettem egy nagyon minimális UI-t, ahol a felhasználónak lehetősége v
 Megismerkedtem az embedding fogalmával, valamint a RAG fogalmával is.
 
 Kipróbáltam a ChromaDB vektor adatbázist, amit lokálisan dockerben futtattam, feltöltöttem pár önéletrajzot és különböző query-k segítségével teszteltem mire milyen választ ad vissza. (Itt probléma lehet ha több nyelvű önéletrajzok lesznek tárolva)
+
+### 4. hét
+
+Átszerveztem a projekt struktúráját: létrehoztam egy külön backend mappát, ahova kiszerveztem az összes szerveroldali fájlt (ChromaDB kliens, workflow, segédfüggvények).
+
+Megismerkedtem a LangGraph-fal. Átírtam az eredeti Langchain workflow-t LangGraph graph-ra, amelynek 4 csúcsa van:
+- pdf_to_text: PDF fájlokból szöveget nyer ki
+- text_to_vectordb: a szövegeket eltárolja a ChromaDB-ben
+- analyze_cv: az LLM segítségével strukturált JSON-t állít elő minden önéletrajzból (név, email, telefon, helyszín, skill-ek, nyelvek)
+- print_candidates: a kinyert adatokat kiírja a konzolra
+
+Módosítottam a Python backendet (backend.py), amely egy /analyze végponton fogadja a feltöltött PDF fájlokat, majd meghívja a LangGraph workflow-t, és a feldolgozott jelöltek adatait JSON-ban adja vissza.
+
+Kibővítettem a ChromaDB klienst két függvénnyel: az egyik dokumentumokat ad hozzá a gyűjteményhez, a másik szöveges query alapján visszakeresi a leghasonlóbb bejegyzéseket. Hozzáadtam egy duplikátumszűrőt is, hogy ugyanaz az önéletrajz ne kerüljön be kétszer az adatbázisba.
+
+Létrehoztam egy /query végpontot a backenden, ami a ChromaDB-t kérdezi le a felhasználó által begépelt kérdés alapján. (ez még nem teljesen adja vissza a jó eredményt)
+
+A Next.js frontendhez API route-okat írtam (/api/analyze, /api/query), amelyek továbbítják a kéréseket a Python backendnek.
+
+Összekapcsoltam a frontend chat dobozát a backenddel: a felhasználó kérdést tud feltenni a feltöltött jelöltekről, a rendszer a ChromaDB-ből visszakeresi a legrelevásabb önéletrajz-részleteket, és azokat kártyákon jeleníti meg az UI-ban.
+
+Frissítettem az UI dizájnját, hogy intuitívabb és egyertelműbb legyen a helyes használat.
+
+Készítettem egy futtatási útmutatót.
