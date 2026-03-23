@@ -117,3 +117,9 @@ A Next.js frontendhez API route-okat írtam (/api/analyze, /api/query), amelyek 
 Frissítettem az UI dizájnját, hogy intuitívabb és egyertelműbb legyen a helyes használat.
 
 Készítettem egy futtatási útmutatót.
+
+### 5. hét
+
+A héten az anonimizálással tervezésével foglalkoztam. Átgondoltam, hogy milyen workflow legyen és arra jutottam, hogy egy Agent formájában fog megvalósulni. Ez az Agent megkapja a egyes önéletrajzokat, és ezen kívül minden anonimizációhoz szükséges tool-t. Feldogozza az önéletrajz szövegét, megfelelő tool-ok segítségével pedig anonimizálja azt. 
+
+Összeírtam magamnak, hogy az anonimizáláskor, milyen szövegekre/dolgokra kell majd figyelni amikor a jövő héten implementálom ezt az Agent-et.
