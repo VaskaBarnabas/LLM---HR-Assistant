@@ -123,3 +123,16 @@ Készítettem egy futtatási útmutatót.
 A héten az anonimizálással tervezésével foglalkoztam. Átgondoltam, hogy milyen workflow legyen és arra jutottam, hogy egy Agent formájában fog megvalósulni. Ez az Agent megkapja a egyes önéletrajzokat, és ezen kívül minden anonimizációhoz szükséges tool-t. Feldogozza az önéletrajz szövegét, megfelelő tool-ok segítségével pedig anonimizálja azt. 
 
 Összeírtam magamnak, hogy az anonimizáláskor, milyen szövegekre/dolgokra kell majd figyelni amikor a jövő héten implementálom ezt az Agent-et.
+
+### 6. hét
+
+Telepítettem a PyMuPDF szerkesztőt, amit használtam az anonimizáció megvalósításához.
+
+Tesztkörnyezetben létrehoztam egy egyszerű PDF-et (example5.pdf), ami kifejezetten a tartalmaz a jelentkező nemére vonatkozó információkat, és erre létrehoztam egy anonimizáló gráfot Langrapf segítségével. 
+
+Az elején még agent formájában próbáltam megvalósítani, de mivel nem volt konzisztens minden adat kiszűrése, így a gráf mellett döntöttem.
+
+A gráf tartalmaz 4 csúcsot, amik közül mindegyik más rész anonimizációjáért fele. Az elsőés a második a nemre vonatkozó konkrét szavakat szűrik ki, míg a hamradik csúcs azokat a szakmákat alakítja át áltaálnossá, amik tartlamaznak a nemre utaló jeleket mint például a pincérnő. Végül az utolsó csúcs alkalmazza ezeket a változtatásokat a pdf-re, ami keretein belül beírja a módosításkat az eredeti PDF másolatába, figyelve a szöveg formátumára.
+
+Jelenleg csak angol szövegekkel működik.
+
