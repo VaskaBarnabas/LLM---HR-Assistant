@@ -1,4 +1,5 @@
 from difflib import SequenceMatcher
+import re
 from pathlib import Path
 import os
 
@@ -90,10 +91,16 @@ _PROMPTS = {
     ),
     "gendered_nouns": (
         "You are a Linguistic Neutralization Agent. Your task is to identify job titles, roles, "
-        "or nouns that contain gendered suffixes or roots (e.g., 'üzletasszony', 'titkárnő', "
-        "'pincérlány'). Replace these with their gender-neutral professional equivalents "
-        "(e.g., 'üzleti szakember', 'titkár', 'felszolgáló'). You must ensure that the replaced "
-        "word fits the original sentence structure and maintains the professional context. "
+        "or nouns that contain gendered suffixes or roots in ANY language — including English and Hungarian. "
+        "English examples: 'fireman' → 'firefighter', 'fisherman/fishermen' → 'fisher/fishers', "
+        "'crewman/crewmen' → 'crew member/crew members', 'spokesman/spokesmen' → 'spokesperson/spokespersons', "
+        "'chairman' → 'chairperson', 'stewardess' → 'flight attendant', 'actress' → 'actor', "
+        "'waitress' → 'server', 'steward/stewardess' → 'flight attendant', 'salesman' → 'salesperson', "
+        "'policeman' → 'police officer', 'businessman' → 'business professional'. "
+        "Hungarian examples: 'üzletasszony' → 'üzleti szakember', 'titkárnő' → 'titkár', "
+        "'pincérlány' → 'felszolgáló'. "
+        "Replace each gendered term with its gender-neutral professional equivalent. "
+        "Preserve plurals, inflections, and sentence structure. "
         "Output only the modified text."
     ),
     "pronouns": (
@@ -170,81 +177,36 @@ def _span_style_at(page, rect):
     return 11, "helv", (0, 0, 0)
 
 
-def _build_pdf_from_scratch(anonymized_text: str, input_pdf: str, output_pdf: str) -> None:
-    """Build a new PDF from scratch using word-level position matching.
+def _normalize_bullets(text: str) -> str:
+    """Replace PDF-extraction bullet artifacts with a proper bullet character.
 
-    Rasterizes each original page as background, then covers changed words
-    with white rectangles and writes replacement text on top.
-    Uses get_text("words") for exact word-boundary matching — prevents
-    partial-word hits (e.g. 'he' inside 'the').
+    PyMuPDF often extracts bullet glyphs as '..' or unicode symbols that
+    Helvetica cannot render. This normalises them to a plain ASCII hyphen
+    so the output PDF displays a visible list marker.
     """
-    anon_words = anonymized_text.split()
+    # Replace '..' or '...' at the start of a line (optional leading whitespace)
+    text = re.sub(r'(?m)^(\s*)\.{2,3}\s*', r'\1- ', text)
+    # Replace common unicode bullets (•, ◦, ▪, ▸, ‣, …) with '-'
+    text = re.sub(r'(?m)^(\s*)[•◦▪▸‣]\s*', r'\1- ', text)
+    return text
 
-    src_doc = pymupdf.open(input_pdf)
 
-    # Collect every word with its page index and bounding box
-    # get_text("words") -> (x0, y0, x1, y1, word, block_no, line_no, word_no)
-    all_words: list[tuple[int, pymupdf.Rect, str]] = []
-    for page_idx, page in enumerate(src_doc):
-        for w in page.get_text("words"):
-            all_words.append((page_idx, pymupdf.Rect(w[0], w[1], w[2], w[3]), w[4]))
-
-    orig_texts = [w[2] for w in all_words]
-
-    matcher = SequenceMatcher(None, orig_texts, anon_words, autojunk=False)
-
-    # replace_at[i] = new text to write at word i (may be multi-word collapsed into one rect)
-    # skip contains word indices whose rect should just be blanked (tail of a multi-word orig span)
-    replace_at: dict[int, str] = {}
-    skip: set[int] = set()
-
-    for op, i1, i2, j1, j2 in matcher.get_opcodes():
-        if op == "replace":
-            replace_at[i1] = " ".join(anon_words[j1:j2])
-            for i in range(i1 + 1, i2):
-                skip.add(i)
-        elif op == "delete":
-            replace_at[i1] = ""
-            for i in range(i1 + 1, i2):
-                skip.add(i)
-
-    out_doc = pymupdf.open()
-
-    # First pass: create all output pages with rasterized backgrounds
-    for page_idx, src_page in enumerate(src_doc):
-        page_rect = src_page.rect
-        pixmap = src_page.get_pixmap(matrix=pymupdf.Matrix(2, 2), alpha=False)
-        new_page = out_doc.new_page(width=page_rect.width, height=page_rect.height)
-        new_page.insert_image(page_rect, pixmap=pixmap, overlay=False)
-
-    # Second pass: apply word-level replacements
-    for word_idx, (page_idx, rect, _) in enumerate(all_words):
-        if word_idx not in replace_at and word_idx not in skip:
-            continue
-
-        src_page = src_doc[page_idx]
-        new_page = out_doc[page_idx]
-
-        if word_idx in skip:
-            new_page.draw_rect(rect, color=None, fill=(1, 1, 1))
-            continue
-
-        new_text = replace_at[word_idx]
-        fontsize, fontname, text_color = _span_style_at(src_page, rect)
-        new_page.draw_rect(rect, color=None, fill=(1, 1, 1))
-        if new_text:
-            new_page.insert_textbox(
-                rect,
-                new_text,
-                fontsize=fontsize,
-                fontname=fontname,
-                color=text_color,
-                align=pymupdf.TEXT_ALIGN_LEFT,
-            )
-
-    src_doc.close()
-    out_doc.save(output_pdf)
-    out_doc.close()
+def _write_text_pdf(anonymized_text: str, output_pdf: str) -> None:
+    """Write the anonymized text as a plain single-page PDF using insert_page."""
+    text = _normalize_bullets(anonymized_text)
+    doc = pymupdf.open()
+    doc.insert_page(
+        -1,
+        text=text,
+        fontsize=11,
+        width=595,
+        height=842,
+        fontname="Helvetica",
+        fontfile=None,
+        color=(0, 0, 0),
+    )
+    doc.save(output_pdf)
+    doc.close()
 
 
 # ---------------------------------------------------------------------------
@@ -283,8 +245,8 @@ def node_life_events(state: AnonState) -> AnonState:
 
 
 def node_save_pdf(state: AnonState) -> AnonState:
-    print("[PDF] Building anonymized PDF from scratch...")
-    _build_pdf_from_scratch(state["current_text"], state["input_pdf"], state["output_path"])
+    print("[PDF] Writing anonymized text as plain PDF...")
+    _write_text_pdf(state["current_text"], state["output_path"])
     print(f"[PDF] Saved to: {state['output_path']}")
     return state
 
