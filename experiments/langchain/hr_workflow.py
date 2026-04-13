@@ -1,7 +1,6 @@
 from difflib import SequenceMatcher
 import re
 from pathlib import Path
-import os
 
 import pymupdf
 from dotenv import load_dotenv
@@ -20,11 +19,11 @@ load_dotenv()
 # CV Analysis (used by backend.py)
 # ---------------------------------------------------------------------------
 
-_analysis_model = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
-    google_api_key=os.getenv("GEMINI_API_KEY"),
-    temperature=0,
-)
+# _analysis_model = ChatGoogleGenerativeAI(
+#     model="gemini-2.5-flash-lite",
+#     google_api_key=os.getenv("GEMINI_API_KEY"),
+#     temperature=0,
+# )
 
 _analysis_model2 = ChatOpenAI(
     model="docker.io/ai/gemma4:E4B",
@@ -32,6 +31,7 @@ _analysis_model2 = ChatOpenAI(
     api_key="docker",
     temperature=0,
 )
+_analysis_model = _analysis_model2
 
 _analysis_template = """You are a Senior HR Specialist. Extract information from the CVs below and return a JSON array.
 
@@ -79,10 +79,16 @@ def analyze_pdf_paths(paths: list[str]) -> list[dict]:
 # Anonymization agents (one LLM per agent)
 # ---------------------------------------------------------------------------
 
-def _make_llm() -> ChatGoogleGenerativeAI:
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+def _make_llm() -> ChatOpenAI:
+    # return ChatGoogleGenerativeAI(
+    #     model="gemini-2.5-flash-lite",
+    #     google_api_key=os.getenv("GEMINI_API_KEY"),
+    #     temperature=0,
+    # )
+    return ChatOpenAI(
+        model="docker.io/ai/gemma4:E4B",
+        base_url="http://localhost:12434/v1",
+        api_key="docker",
         temperature=0,
     )
 
@@ -321,12 +327,12 @@ def anonymize_pdf(input_pdf: str, output_pdf: str) -> str:
     Returns the final anonymized text.
     """
     cv_text = extract_pdf_text(input_pdf)
-    #final_state = anonymization_pipeline.invoke({
-    #    "current_text": cv_text,
-    #    "input_pdf": input_pdf,
-    #    "output_path": output_pdf,
-    #})
-    #return final_state["current_text"]
+    final_state = anonymization_pipeline.invoke({
+        "current_text": cv_text,
+        "input_pdf": input_pdf,
+        "output_path": output_pdf,
+    })
+    return final_state["current_text"]
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +344,7 @@ if __name__ == "__main__":
     input_pdf = str(test_dir / "example5.pdf")
     output_pdf = str(test_dir / "example5_anonymized.pdf")
 
-    """print("=" * 60)
+    print("=" * 60)
     print("ORIGINAL CV TEXT")
     print("=" * 60)
     print(extract_pdf_text(input_pdf))
@@ -348,7 +354,4 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("FINAL ANONYMIZED TEXT")
     print("=" * 60)
-    print(anonymized)"""
-
-    response = _analysis_model2.invoke("Hello, who are you?")
-    print(response.content)
+    print(anonymized)
