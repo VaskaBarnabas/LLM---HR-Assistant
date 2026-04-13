@@ -6,6 +6,7 @@ import os
 import pymupdf
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -22,6 +23,13 @@ load_dotenv()
 _analysis_model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash-lite",
     google_api_key=os.getenv("GEMINI_API_KEY"),
+    temperature=0,
+)
+
+_analysis_model2 = ChatOpenAI(
+    model="docker.io/ai/gemma4:E4B",
+    base_url="http://localhost:12434/v1",
+    api_key="docker",
     temperature=0,
 )
 
@@ -192,19 +200,56 @@ def _normalize_bullets(text: str) -> str:
 
 
 def _write_text_pdf(anonymized_text: str, output_pdf: str) -> None:
-    """Write the anonymized text as a plain single-page PDF using insert_page."""
-    text = _normalize_bullets(anonymized_text)
+    """Write text with a tight layout, small bullets, and left indentation."""
     doc = pymupdf.open()
-    doc.insert_page(
-        -1,
-        text=text,
-        fontsize=11,
-        width=595,
-        height=842,
-        fontname="Helvetica",
-        fontfile=None,
-        color=(0, 0, 0),
-    )
+    page = doc.new_page(width=595, height=842)
+    
+    # Text container (50pt margins)
+    rect = pymupdf.Rect(50, 50, 545, 792)
+    
+    lines = anonymized_text.split('\n')
+    html_body = ""
+    in_list = False
+
+    for line in lines:
+        clean = line.strip()
+        if not clean:
+            html_body += "<br>" # Preserve empty lines if they exist
+            continue
+        
+        if clean.startswith(('•', '-', '*')):
+            if not in_list:
+                # 'margin-left' creates the indent for the whole list
+                html_body += "<ul style='margin-left: 30px; padding: 0;'>"
+                in_list = True
+            # Strip the char and wrap
+            html_body += f"<li>{clean[1:].strip()}</li>"
+        else:
+            if in_list:
+                html_body += "</ul>"
+                in_list = False
+            html_body += f"<p>{clean}</p>"
+    
+    if in_list: html_body += "</ul>"
+
+    # CSS breakdown:
+    # - p, ul, li: margin 0 removes the extra 'air' between lines.
+    # - li::marker: reduces bullet size to 7pt.
+    # - line-height: 1.0 ensures no extra vertical scaling.
+    full_html = f"""
+    <style>
+        body {{ font-family: Helvetica; font-size: 11pt; line-height: 1.0; }}
+        p, ul, li {{ margin: 0; padding: 0; }}
+        li {{ margin-left: 0; }}
+        li::marker {{ font-size: 7pt; }} 
+    </style>
+    <div>
+        {html_body}
+    </div>
+    """
+
+    page.insert_htmlbox(rect, full_html)
+    
     doc.save(output_pdf)
     doc.close()
 
@@ -276,12 +321,12 @@ def anonymize_pdf(input_pdf: str, output_pdf: str) -> str:
     Returns the final anonymized text.
     """
     cv_text = extract_pdf_text(input_pdf)
-    final_state = anonymization_pipeline.invoke({
-        "current_text": cv_text,
-        "input_pdf": input_pdf,
-        "output_path": output_pdf,
-    })
-    return final_state["current_text"]
+    #final_state = anonymization_pipeline.invoke({
+    #    "current_text": cv_text,
+    #    "input_pdf": input_pdf,
+    #    "output_path": output_pdf,
+    #})
+    #return final_state["current_text"]
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +338,7 @@ if __name__ == "__main__":
     input_pdf = str(test_dir / "example5.pdf")
     output_pdf = str(test_dir / "example5_anonymized.pdf")
 
-    print("=" * 60)
+    """print("=" * 60)
     print("ORIGINAL CV TEXT")
     print("=" * 60)
     print(extract_pdf_text(input_pdf))
@@ -303,4 +348,7 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("FINAL ANONYMIZED TEXT")
     print("=" * 60)
-    print(anonymized)
+    print(anonymized)"""
+
+    response = _analysis_model2.invoke("Hello, who are you?")
+    print(response.content)
