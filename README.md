@@ -136,3 +136,28 @@ A gráf tartalmaz 4 csúcsot, amik közül mindegyik más rész anonimizációj�
 
 Jelenleg csak angol szövegekkel működik.
 
+### 7. hét
+
+Az előző megoldásomat átalakítottam agent alapú megoldásra a megbeszéltek szerint.
+
+Minden egyes feladathoz egy külön agentet hoztam létre, amik az adott elemek szűrésével foglakozik a bemenetként kapott PDF-ből.
+
+Ezek az agentek rendre 
+- Neveket illetve ehhez tartozó információk szűrésével foglakozó agent
+- Olyan szakmáknak a szűrésével foglakozó agent, amik nemre utalhatnak
+- Névmások szűrésével fogakozó agent
+- Családhoz, illetve a családban betöltött szerepből származó informácókat szűrő agent
+- Egy ember elétében bekövetkezett események amik a nemre utalhatnak, ilyen például a terhesség stb.
+
+Kijavítottam a PDF generálást, mivel a a módszer, hogy egyből a szövegbe beleírom nem működött, mivel vagy üresen hagyta a kicseréledő szavak helyét, vagy pedig többszörösen írta át, így a következő meggoldásra jutottam. Az eredeti önéletrajzból kinyert szöveget anonimizálás után egy teljesen új PDF-be mentem el, amit a 0-ról építek fel átadva neki az anonimizáló szöveget. Itt a jövőben érdemes lesz javítani a kinézeten, de a szöveg midnen eleme helyesen, az anonimizált verzióval szerepel.
+
+Frissítettem a gráfot is ami mentén végrehajtódik a folyamat, így minden agent egy gráf csomópontba került, illetve egy a gráf utolsó pontja állítja elő az új PDF-et az anonimizált szövegből.
+
+Jelenleg a folyamatot console-ban lehet követni, illetve tesztelni, valamint a kész PDF is bekerül futás után a teszt_cvs mappába.
+
+Mivel sokszor keveset tudtam tezstelni, mivel gyorsan elértem a napi limitemet a választott nagy nyelvi modellnél, így áttértem lokálisan futtatott LLM-re. Először Ollama segítségével próbáltam futtatni de, mindig Internal Server EDrrort kaptam, és mivel sok ideig nem tudtam megoldani, végül a Docker-ben történő futtatás mellett döntöttem.
+
+Jelenleg a agentek is már a lokális LLM-et hívják, ami a Gemma4:e4b változata.
+
+Illetve megismerkedtem a Google Stitch UI designer használatával, ami segítségével a jövőben könnyebben tudom fejleszteni a UI elemeket az alkalmazásban.
+
