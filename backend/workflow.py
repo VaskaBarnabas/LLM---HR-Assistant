@@ -129,60 +129,12 @@ def extract_pdf_text(pdf_path: str) -> str:
     return text
 
 
-def _write_text_pdf(anonymized_text: str, output_pdf: str) -> None:
-    doc = pymupdf.open()
-    page = doc.new_page(width=595, height=842)
-    rect = pymupdf.Rect(50, 50, 545, 792)
-
-    lines = anonymized_text.split('\n')
-    html_body = ""
-    in_list = False
-
-    for line in lines:
-        clean = line.strip()
-        if not clean:
-            html_body += "<br>"
-            continue
-
-        if clean.startswith(('•', '-', '*')):
-            if not in_list:
-                html_body += "<ul style='margin-left: 30px; padding: 0;'>"
-                in_list = True
-            html_body += f"<li>{clean[1:].strip()}</li>"
-        else:
-            if in_list:
-                html_body += "</ul>"
-                in_list = False
-            html_body += f"<p>{clean}</p>"
-
-    if in_list:
-        html_body += "</ul>"
-
-    full_html = f"""
-    <style>
-        body {{ font-family: Helvetica; font-size: 11pt; line-height: 1.0; }}
-        p, ul, li {{ margin: 0; padding: 0; }}
-        li {{ margin-left: 0; }}
-        li::marker {{ font-size: 7pt; }}
-    </style>
-    <div>
-        {html_body}
-    </div>
-    """
-
-    page.insert_htmlbox(rect, full_html)
-    doc.save(output_pdf)
-    doc.close()
-
-
 # ---------------------------------------------------------------------------
 # Anonymization LangGraph pipeline
 # ---------------------------------------------------------------------------
 
 class AnonState(TypedDict):
     current_text: str
-    input_pdf: str
-    output_path: str
 
 
 def node_names(state: AnonState) -> AnonState:
@@ -210,44 +162,80 @@ def node_life_events(state: AnonState) -> AnonState:
     return {"current_text": _run_agent(_llm_life_events, _PROMPTS["life_events"], state["current_text"])}
 
 
-def node_save_pdf(state: AnonState) -> AnonState:
-    print("[PDF] Writing anonymized text as plain PDF...")
-    _write_text_pdf(state["current_text"], state["output_path"])
-    print(f"[PDF] Saved to: {state['output_path']}")
-    return state
-
-
 _anon_graph = StateGraph(AnonState)
 _anon_graph.add_node("names", node_names)
 _anon_graph.add_node("gendered_nouns", node_gendered_nouns)
 _anon_graph.add_node("pronouns", node_pronouns)
 _anon_graph.add_node("family_status", node_family_status)
 _anon_graph.add_node("life_events", node_life_events)
-_anon_graph.add_node("save_pdf", node_save_pdf)
 
 _anon_graph.add_edge(START, "names")
 _anon_graph.add_edge("names", "gendered_nouns")
 _anon_graph.add_edge("gendered_nouns", "pronouns")
 _anon_graph.add_edge("pronouns", "family_status")
 _anon_graph.add_edge("family_status", "life_events")
-_anon_graph.add_edge("life_events", "save_pdf")
-_anon_graph.add_edge("save_pdf", END)
+_anon_graph.add_edge("life_events", END)
 
 anonymization_pipeline = _anon_graph.compile()
 
 
-def anonymize_pdf(input_pdf: str, output_pdf: str) -> str:
-    """Run the 5-agent anonymization pipeline and save the result as a new PDF.
-
-    Returns the final anonymized text.
-    """
+def anonymize_text(input_pdf: str) -> str:
+    """Run the 5-agent anonymization pipeline, return the anonymized plain text."""
     cv_text = extract_pdf_text(input_pdf)
-    final_state = anonymization_pipeline.invoke({
-        "current_text": cv_text,
-        "input_pdf": input_pdf,
-        "output_path": output_pdf,
-    })
+    final_state = anonymization_pipeline.invoke({"current_text": cv_text})
     return final_state["current_text"]
+
+
+def _esc(text: str) -> str:
+    """HTML-escape a plain-text string to prevent XSS."""
+    return (
+        text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
+
+
+def anonymized_text_to_html(text: str) -> str:
+    """Convert plain anonymized CV text to structured, XSS-safe HTML for display."""
+    lines = text.split("\n")
+    html_parts: list[str] = []
+    in_list = False
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            continue
+
+        is_bullet = stripped.startswith(("•", "-", "*")) and len(stripped) > 1
+
+        if is_bullet:
+            if not in_list:
+                html_parts.append('<ul class="cv-list">')
+                in_list = True
+            html_parts.append(f"<li>{_esc(stripped[1:].strip())}</li>")
+        else:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            is_header = (
+                (stripped.isupper() and len(stripped) < 60)
+                or (len(stripped) < 50 and stripped[0].isupper() and stripped.endswith(":"))
+            )
+            if is_header:
+                html_parts.append(f'<h3 class="cv-section">{_esc(stripped.rstrip(":"))}</h3>')
+            else:
+                html_parts.append(f"<p>{_esc(stripped)}</p>")
+
+    if in_list:
+        html_parts.append("</ul>")
+
+    return "\n".join(html_parts)
 
 
 # ---------------------------------------------------------------------------
@@ -256,25 +244,21 @@ def anonymize_pdf(input_pdf: str, output_pdf: str) -> str:
 
 class State(TypedDict):
     paths: list[str]
-    anonymized_paths: list[str]
+    anonymized_texts: list[str]
     texts: list[str]
     candidates: list[dict]
 
 
 def anonymize_pdfs_node(state: State) -> State:
-    anonymized = []
+    anonymized_texts = []
     for path in state["paths"]:
-        p = Path(path)
-        output = str(p.parent / f"{p.stem}_anonymized{p.suffix}")
-        print(f"[Anonymize] Processing {p.name}...")
-        anonymize_pdf(path, output)
-        anonymized.append(output)
-    return {"anonymized_paths": anonymized}
+        print(f"[Anonymize] Processing {Path(path).name}...")
+        anonymized_texts.append(anonymize_text(path))
+    return {"anonymized_texts": anonymized_texts}
 
 
 def pdf_to_text_node(state: State) -> State:
-    paths = state.get("anonymized_paths") or state["paths"]
-    cv_texts = analyze_pdf_paths(paths)
+    cv_texts = analyze_pdf_paths(state["paths"])
     return {"texts": cv_texts}
 
 

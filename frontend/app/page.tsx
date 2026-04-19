@@ -12,6 +12,7 @@ interface Candidate {
   languages?: string[];
   fileName: string;
   analyzedAt: string;
+  anonymizedHtml?: string;
 }
 
 export default function Home() {
@@ -286,40 +287,76 @@ export default function Home() {
 
       {/* Detail side sheet */}
       {selected && (
-        <>
-          <div className="detail-backdrop" onClick={() => setSelected(null)} />
-          <aside className="detail-sheet">
-            <div className="sheet-header">
-              <span className="sheet-title">Candidate Profile</span>
-              <button className="btn-close" onClick={() => setSelected(null)}>✕</button>
-            </div>
-            <div className="sheet-name">{selected.name}</div>
-
-            <div className="sheet-section">
-              <div className="sheet-section-label">Contact</div>
-              <div className="detail-row"><div className="detail-key">Email</div><div className="detail-val">{selected.email}</div></div>
-              <div className="detail-row"><div className="detail-key">Phone</div><div className="detail-val">{selected.phone}</div></div>
-              <div className="detail-row"><div className="detail-key">Location</div><div className="detail-val">{selected.location}</div></div>
-            </div>
-
-            <div className="sheet-section">
-              <div className="sheet-section-label">Skills</div>
-              <div className="skills-grid">
-                {(Array.isArray(selected.skills) ? selected.skills : []).map(s => <span key={s} className="skill-tag">{s}</span>)}
-              </div>
-            </div>
-
-            {selected.languages && selected.languages.length > 0 && (
-              <div className="sheet-section">
-                <div className="sheet-section-label">Languages</div>
-                <div className="skills-grid">
-                  {selected.languages.map(l => <span key={l} className="skill-tag lang-tag">{l}</span>)}
-                </div>
-              </div>
-            )}
-          </aside>
-        </>
+        <DetailSheet candidate={selected} onClose={() => setSelected(null)} />
       )}
+    </>
+  );
+}
+
+function DetailSheet({ candidate, onClose }: { candidate: Candidate; onClose: () => void }) {
+  const [cvOpen, setCvOpen] = useState(false);
+
+  return (
+    <>
+      <div className="detail-backdrop" onClick={onClose} />
+      <aside className="detail-sheet">
+        <div className="sheet-header">
+          <span className="sheet-title">Candidate Profile</span>
+          <button className="btn-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="sheet-name">{candidate.name}</div>
+
+        <div className="sheet-section">
+          <div className="sheet-section-label">Contact</div>
+          <div className="detail-row"><div className="detail-key">Email</div><div className="detail-val">{candidate.email}</div></div>
+          <div className="detail-row"><div className="detail-key">Phone</div><div className="detail-val">{candidate.phone}</div></div>
+          <div className="detail-row"><div className="detail-key">Location</div><div className="detail-val">{candidate.location}</div></div>
+        </div>
+
+        <div className="sheet-section">
+          <div className="sheet-section-label">Skills</div>
+          <div className="skills-grid">
+            {(Array.isArray(candidate.skills) ? candidate.skills : []).map(s => <span key={s} className="skill-tag">{s}</span>)}
+          </div>
+        </div>
+
+        {candidate.languages && candidate.languages.length > 0 && (
+          <div className="sheet-section">
+            <div className="sheet-section-label">Languages</div>
+            <div className="skills-grid">
+              {candidate.languages.map(l => <span key={l} className="skill-tag lang-tag">{l}</span>)}
+            </div>
+          </div>
+        )}
+
+        {candidate.anonymizedHtml && (
+          <div className="sheet-section">
+            <button
+              className="cv-toggle"
+              onClick={() => setCvOpen(o => !o)}
+              aria-expanded={cvOpen}
+            >
+              <svg
+                width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5"
+                style={{ transform: cvOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              Anonymized CV
+            </button>
+            {cvOpen && (
+              <div
+                className="cv-html-body"
+                // Safe: HTML is generated server-side by anonymized_text_to_html()
+                // which HTML-escapes all LLM output before wrapping in structural tags.
+                // No user-supplied raw HTML ever reaches this field.
+                dangerouslySetInnerHTML={{ __html: candidate.anonymizedHtml }}
+              />
+            )}
+          </div>
+        )}
+      </aside>
     </>
   );
 }

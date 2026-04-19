@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from backend.workflow import chain
+from backend.workflow import chain, anonymized_text_to_html
 from backend.chromaClient import query as chroma_query
 
 app = FastAPI()
@@ -32,8 +32,10 @@ async def analyze(files: list[UploadFile] = File(...)):
             tmp.close()
             tmp_paths.append(tmp.name)
 
-        result_state = chain.invoke({"paths": tmp_paths, "texts": [], "candidates": []})
+        result_state = chain.invoke({"paths": tmp_paths, "anonymized_texts": [], "texts": [], "candidates": []})
         candidates = result_state["candidates"]
+
+        anonymized_texts = result_state.get("anonymized_texts") or []
 
         result = []
         for i, c in enumerate(candidates):
@@ -67,6 +69,7 @@ async def analyze(files: list[UploadFile] = File(...)):
                 "languages": raw_langs,
                 "fileName": files[i].filename if i < len(files) else "",
                 "analyzedAt": __import__("datetime").datetime.utcnow().isoformat(),
+                "anonymizedHtml": anonymized_text_to_html(anonymized_texts[i]) if i < len(anonymized_texts) else "",
             })
 
         return {"candidates": result}

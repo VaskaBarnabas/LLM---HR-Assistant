@@ -719,3 +719,59 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Anonymized CV toggle & viewer ── */
+.cv-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 8px;
+}
+.cv-toggle:hover {
+  color: var(--foreground);
+  border-color: oklch(1 0 0 / 25%);
+}
+.cv-html-body {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  max-height: 420px;
+  overflow-y: auto;
+}
+.cv-html-body h3.cv-section {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  margin: 14px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.cv-html-body h3.cv-section:first-child {
+  margin-top: 0;
+}
+.cv-html-body p {
+  margin: 3px 0;
+}
+.cv-html-body ul.cv-list {
+  margin: 4px 0 4px 16px;
+  padding: 0;
+}
+.cv-html-body ul.cv-list li {
+  margin: 2px 0;
+}
