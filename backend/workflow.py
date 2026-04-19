@@ -1,10 +1,8 @@
-import os
 from pathlib import Path
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from dotenv import load_dotenv
 import pymupdf
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -16,13 +14,14 @@ from backend.utils.path_analizer import analyze_pdf_paths
 load_dotenv(Path(__file__).parent / ".env")
 
 # ---------------------------------------------------------------------------
-# CV Analysis LLM (Gemini)
+# CV Analysis LLM (local Docker / gemma4)
 # ---------------------------------------------------------------------------
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
-    google_api_key=os.getenv("GEMINI_API_KEY"),
-    temperature=0
+llm = ChatOpenAI(
+    model="docker.io/ai/gemma4:E4B",
+    base_url="http://localhost:12434/v1",
+    api_key="docker",
+    temperature=0,
 )
 
 _parser = JsonOutputParser()
@@ -51,16 +50,11 @@ text_extraction_chain = _prompt | llm | _parser
 
 
 # ---------------------------------------------------------------------------
-# Anonymization LLMs (Docker / local gemma4)
+# Anonymization LLMs (reuse local Docker llm)
 # ---------------------------------------------------------------------------
 
 def _make_anon_llm() -> ChatOpenAI:
-    return ChatOpenAI(
-        model="docker.io/ai/gemma4:E4B",
-        base_url="http://localhost:12434/v1",
-        api_key="docker",
-        temperature=0,
-    )
+    return llm
 
 
 _PROMPTS = {
