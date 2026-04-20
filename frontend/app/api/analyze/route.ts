@@ -5,15 +5,18 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const files = formData.getAll('files') as File[];
+  const filters = formData.get('filters') as string | null;
 
   if (files.length === 0) {
     return NextResponse.json({ error: 'No files provided' }, { status: 400 });
   }
 
-  // Forward to the FastAPI Python backend
   const backendForm = new FormData();
   for (const file of files) {
     backendForm.append('files', file, file.name);
+  }
+  if (filters) {
+    backendForm.append('filters', filters);
   }
 
   const res = await fetch(`${BACKEND_URL}/analyze`, {
