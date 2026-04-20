@@ -130,60 +130,35 @@ def extract_pdf_text(pdf_path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Anonymization LangGraph pipeline
+# Anonymization pipeline (sequential, filter-aware)
 # ---------------------------------------------------------------------------
 
-class AnonState(TypedDict):
-    current_text: str
+_AGENT_ORDER: list[tuple[str, ChatOpenAI]] = [
+    ("names", _llm_names),
+    ("gendered_nouns", _llm_gendered_nouns),
+    ("pronouns", _llm_pronouns),
+    ("family_status", _llm_family_status),
+    ("life_events", _llm_life_events),
+]
 
 
-def node_names(state: AnonState) -> AnonState:
-    print("[Agent 1/5] Anonymizing names and honorifics...")
-    return {"current_text": _run_agent(_llm_names, _PROMPTS["names"], state["current_text"])}
+def anonymize_text(input_pdf: str, filters: dict | None = None) -> str:
+    """Run the anonymization agents sequentially, skipping any disabled by filters.
 
+    filters: dict with keys matching _PROMPTS; True = run, False = skip.
+    If filters is None or a key is missing, the agent runs by default.
+    """
+    if filters is None:
+        filters = {}
 
-def node_gendered_nouns(state: AnonState) -> AnonState:
-    print("[Agent 2/5] Neutralizing gendered job titles and nouns...")
-    return {"current_text": _run_agent(_llm_gendered_nouns, _PROMPTS["gendered_nouns"], state["current_text"])}
-
-
-def node_pronouns(state: AnonState) -> AnonState:
-    print("[Agent 3/5] Replacing gendered pronouns and references...")
-    return {"current_text": _run_agent(_llm_pronouns, _PROMPTS["pronouns"], state["current_text"])}
-
-
-def node_family_status(state: AnonState) -> AnonState:
-    print("[Agent 4/5] Removing family and marital status information...")
-    return {"current_text": _run_agent(_llm_family_status, _PROMPTS["family_status"], state["current_text"])}
-
-
-def node_life_events(state: AnonState) -> AnonState:
-    print("[Agent 5/5] Neutralizing gender-linked life events...")
-    return {"current_text": _run_agent(_llm_life_events, _PROMPTS["life_events"], state["current_text"])}
-
-
-_anon_graph = StateGraph(AnonState)
-_anon_graph.add_node("names", node_names)
-_anon_graph.add_node("gendered_nouns", node_gendered_nouns)
-_anon_graph.add_node("pronouns", node_pronouns)
-_anon_graph.add_node("family_status", node_family_status)
-_anon_graph.add_node("life_events", node_life_events)
-
-_anon_graph.add_edge(START, "names")
-_anon_graph.add_edge("names", "gendered_nouns")
-_anon_graph.add_edge("gendered_nouns", "pronouns")
-_anon_graph.add_edge("pronouns", "family_status")
-_anon_graph.add_edge("family_status", "life_events")
-_anon_graph.add_edge("life_events", END)
-
-anonymization_pipeline = _anon_graph.compile()
-
-
-def anonymize_text(input_pdf: str) -> str:
-    """Run the 5-agent anonymization pipeline, return the anonymized plain text."""
-    cv_text = extract_pdf_text(input_pdf)
-    final_state = anonymization_pipeline.invoke({"current_text": cv_text})
-    return final_state["current_text"]
+    text = extract_pdf_text(input_pdf)
+    for i, (key, agent_llm) in enumerate(_AGENT_ORDER, 1):
+        if filters.get(key, True):
+            print(f"[Agent {i}/5] Running '{key}'...")
+            text = _run_agent(agent_llm, _PROMPTS[key], text)
+        else:
+            print(f"[Agent {i}/5] Skipping '{key}' (disabled by job config)")
+    return text
 
 
 def _esc(text: str) -> str:
@@ -244,16 +219,18 @@ def anonymized_text_to_html(text: str) -> str:
 
 class State(TypedDict):
     paths: list[str]
+    filters: dict
     anonymized_texts: list[str]
     texts: list[str]
     candidates: list[dict]
 
 
 def anonymize_pdfs_node(state: State) -> State:
+    filters = state.get("filters") or {}
     anonymized_texts = []
     for path in state["paths"]:
         print(f"[Anonymize] Processing {Path(path).name}...")
-        anonymized_texts.append(anonymize_text(path))
+        anonymized_texts.append(anonymize_text(path, filters))
     return {"anonymized_texts": anonymized_texts}
 
 

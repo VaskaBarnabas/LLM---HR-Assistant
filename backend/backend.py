@@ -1,9 +1,10 @@
 import os
+import json
 import tempfile
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -21,7 +22,7 @@ app.add_middleware(
 
 
 @app.post("/analyze")
-async def analyze(files: list[UploadFile] = File(...)):
+async def analyze(files: list[UploadFile] = File(...), filters: str = Form("{}")):
     tmp_paths = []
     try:
         # Save each uploaded PDF to a temp file
@@ -32,7 +33,12 @@ async def analyze(files: list[UploadFile] = File(...)):
             tmp.close()
             tmp_paths.append(tmp.name)
 
-        result_state = chain.invoke({"paths": tmp_paths, "anonymized_texts": [], "texts": [], "candidates": []})
+        try:
+            filters_dict = json.loads(filters)
+        except Exception:
+            filters_dict = {}
+
+        result_state = chain.invoke({"paths": tmp_paths, "filters": filters_dict, "anonymized_texts": [], "texts": [], "candidates": []})
         candidates = result_state["candidates"]
 
         anonymized_texts = result_state.get("anonymized_texts") or []
