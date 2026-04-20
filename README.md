@@ -161,3 +161,17 @@ Jelenleg a agentek is már a lokális LLM-et hívják, ami a Gemma4:e4b változa
 
 Illetve megismerkedtem a Google Stitch UI designer használatával, ami segítségével a jövőben könnyebben tudom fejleszteni a UI elemeket az alkalmazásban.
 
+### 8. hét
+
+Az előző héten tesztelt anonimizálást átemeltem a tényleges környezetben, és mostmár ott is elérhető. Annyi módosítssal, hogy nem PDF-ben menti el az anonimizált önéletrajzor, hanem HTML formában, ami meg tud lehet tekinte a jelentkezőnél a UI-on.
+
+Itt is módosítottam, hogy a lokálisan futtatott LLM-et használja a feladat megvalósításához.
+
+Került bejelentkezés illetve regisztráció az appba, ahol Jelentkező és HR szerepkörök közül lehet választani.
+
+HR szerepkör esetén van lehetőség álláshírdetésket létrehozni, ahol azt is ki lehet választani, hogy az anonimizáló agentek közül melyiket szeretné használni. Ezekre a álláshírdésekre jelentkezett embereknek a átszűrt önéletrajzát meg tudja tekinteni.
+
+Jelentkező szerepkör esetén a létrehozott álláshiyrdetéseket látja a felhasználó, ahol le tudja adni a jelentkezését egy önéletrajz feltöltésével.
+
+
+
