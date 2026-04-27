@@ -36,6 +36,15 @@ export default function HRDashboard() {
     router.refresh()
   }
 
+  const deleteListing = async (e: React.MouseEvent, id: string, title: string) => {
+    e.preventDefault()
+    if (!confirm(`Biztosan törlöd a(z) „${title}" hirdetést? Ez az összes jelentkezést is törli.`)) return
+    const supabase = createClient()
+    await supabase.from('applications').delete().eq('job_listing_id', id)
+    await supabase.from('job_listings').delete().eq('id', id)
+    setListings(prev => prev.filter(l => l.id !== id))
+  }
+
   return (
     <>
       <header className="site-header">
@@ -74,26 +83,32 @@ export default function HRDashboard() {
         ) : (
           <div className="listings-grid">
             {listings.map((listing, i) => (
-              <Link
-                key={listing.id}
-                href={`/hr/jobs/${listing.id}`}
-                className="listing-card"
-                style={{ animationDelay: `${i * 40}ms` }}
-              >
-                <div className="listing-card-top">
-                  <span className={`status-dot ${listing.is_open ? 'open' : 'closed'}`} />
-                  <span className="listing-status">{listing.is_open ? 'Nyitott' : 'Lezárt'}</span>
-                </div>
-                <div className="listing-title">{listing.title}</div>
-                {listing.description && (
-                  <div className="listing-desc">{listing.description}</div>
-                )}
-                <div className="listing-meta">
-                  {new Date(listing.created_at).toLocaleDateString('hu-HU')}
-                  {' · '}
-                  {Object.values(listing.anonymization_config).filter(Boolean).length}/5 szűrő aktív
-                </div>
-              </Link>
+              <div key={listing.id} className="listing-card-wrap" style={{ animationDelay: `${i * 40}ms` }}>
+                <Link href={`/hr/jobs/${listing.id}`} className="listing-card">
+                  <div className="listing-card-top">
+                    <span className={`status-dot ${listing.is_open ? 'open' : 'closed'}`} />
+                    <span className="listing-status">{listing.is_open ? 'Nyitott' : 'Lezárt'}</span>
+                  </div>
+                  <div className="listing-title">{listing.title}</div>
+                  {listing.description && (
+                    <div className="listing-desc">{listing.description}</div>
+                  )}
+                  <div className="listing-meta">
+                    {new Date(listing.created_at).toLocaleDateString('hu-HU')}
+                    {' · '}
+                    {Object.values(listing.anonymization_config).filter(Boolean).length}/5 szűrő aktív
+                  </div>
+                </Link>
+                <button
+                  className="btn-delete-listing"
+                  onClick={e => deleteListing(e, listing.id, listing.title)}
+                  title="Hirdetés törlése"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>
+              </div>
             ))}
           </div>
         )}

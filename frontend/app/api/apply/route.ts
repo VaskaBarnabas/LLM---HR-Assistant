@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Store application in Supabase
-  const { error } = await supabase.from('applications').insert({
+  const { data: inserted, error } = await supabase.from('applications').insert({
     job_listing_id: jobListingId,
     applicant_id: user.id,
     analyzed_data: {
@@ -72,13 +72,22 @@ export async function POST(request: NextRequest) {
       languages: candidate.languages,
     },
     anonymized_html: candidate.anonymizedHtml ?? null,
-  })
+  }).select('id').single()
 
   if (error) {
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Már jelentkeztél erre az állásra' }, { status: 409 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Store CV text in ChromaDB with the application_id so ranking can find it
+  if (inserted?.id && candidate.cvText) {
+    await fetch(`${BACKEND_URL}/store-cv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ application_id: inserted.id, cv_text: candidate.cvText }),
+    }).catch(() => { /* non-critical */ })
   }
 
   return NextResponse.json({ success: true })

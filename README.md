@@ -28,8 +28,14 @@ pip install chromadb cohere fastapi uvicorn python-multipart langchain-community
 
 ### 3. ChromaDB indítása (Docker)
 
+## Első indításkor** (létrehozza a konténert és a perzisztens volume-ot):
 ```bash
-docker run -p 8000:8000 chromadb/chroma:1.0.0
+docker run -d --name chroma -p 8000:8000 -v chroma-data:/chroma/chroma chromadb/chroma:1.0.0
+```
+
+## Minden további indításkor** (meglévő konténer újraindítása, adatok megmaradnak):
+```bash
+docker start chroma
 ```
 
 ### 4. Python backend indítása

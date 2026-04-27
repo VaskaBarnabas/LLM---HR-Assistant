@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { DEFAULT_ANON_CONFIG, ANON_FILTER_LABELS, type AnonymizationConfig } from '@/lib/types'
+import { Switch } from '@/components/ui/switch'
 
 export default function NewJobPage() {
   const [title, setTitle] = useState('')
@@ -111,15 +112,10 @@ export default function NewJobPage() {
                     <div className="filter-info">
                       <span className="filter-label">{ANON_FILTER_LABELS[key]}</span>
                     </div>
-                    <button
-                      type="button"
-                      className={`toggle-btn${config[key] ? ' on' : ''}`}
-                      onClick={() => toggle(key)}
-                      aria-checked={config[key]}
-                      role="switch"
-                    >
-                      <span className="toggle-knob" />
-                    </button>
+                    <Switch
+                      checked={config[key]}
+                      onCheckedChange={() => toggle(key)}
+                    />
                   </div>
                 ))}
               </div>

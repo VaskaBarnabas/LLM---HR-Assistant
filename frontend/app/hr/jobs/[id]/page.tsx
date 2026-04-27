@@ -23,6 +23,8 @@ export default function HRJobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [editingConfig, setEditingConfig] = useState(false)
   const [config, setConfig] = useState<AnonymizationConfig | null>(null)
+  const [rankings, setRankings] = useState<{ id: string; rank: number; name: string; skills: string[]; location: string; explanation: string }[] | null>(null)
+  const [isRanking, setIsRanking] = useState(false)
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -74,6 +76,31 @@ export default function HRJobDetailPage() {
     } catch { /* ignore */ } finally { setIsChatLoading(false) }
   }
 
+  const fetchRankings = async () => {
+    if (!listing || candidates.length === 0 || isRanking) return
+    setIsRanking(true)
+    setRankings(null)
+    try {
+      const res = await fetch('/api/rank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_title: listing.title,
+          job_description: listing.description || '',
+          candidates: candidates.map(c => ({
+            id: c.id,
+            name: c.name,
+            skills: c.skills,
+            languages: c.languages || [],
+            location: c.location,
+          })),
+        }),
+      })
+      const data = await res.json()
+      if (data.rankings) setRankings(data.rankings)
+    } catch { /* ignore */ } finally { setIsRanking(false) }
+  }
+
   const filtered = candidates.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -116,7 +143,7 @@ export default function HRJobDetailPage() {
               <span className="status-dot" />
               {listing.is_open ? 'Nyitott' : 'Lezárt'}
             </button>
-            <button className="btn-ghost-sm" onClick={() => setEditingConfig(v => !v)}>Szűrők</button>
+          
           </div>
         </div>
 
@@ -152,7 +179,32 @@ export default function HRJobDetailPage() {
             <div className="section-header">
               <span className="section-title">Jelentkezők</span>
               <span className="section-count">{filtered.length} találat</span>
+              <button className="btn-rank" onClick={fetchRankings} disabled={isRanking}>
+                {isRanking ? <><div className="processing-spinner small" /> Rangsorolás...</> : 'Rangsorolás'}
+              </button>
             </div>
+            {rankings && (
+              <div className="ranking-panel">
+                <div className="ranking-title">Top 5 jelölt – {listing.title}</div>
+                <div className="ranking-cards">
+                  {rankings.map(r => (
+                    <div key={r.id} className="ranking-card"
+                      onClick={() => { const c = candidates.find(x => x.id === r.id); if (c) setSelected(c) }}>
+                      <div className="ranking-badge">#{r.rank}</div>
+                      <div className="ranking-card-body">
+                        <div className="ranking-card-name">{r.name}</div>
+                        {r.location && <div className="ranking-card-location">{r.location}</div>}
+                        {r.explanation && <div className="ranking-card-explanation">{r.explanation}</div>}
+                      </div>
+                      <div className="ranking-card-skills">
+                        {r.skills.slice(0, 4).map(s => <span key={s} className="skill-pill">{s}</span>)}
+                        {r.skills.length > 4 && <span className="skill-pill more">+{r.skills.length - 4}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="bento-grid">
               {filtered.map((c, i) => (
                 <CandidateCard key={c.id} candidate={c} index={i}
