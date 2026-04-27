@@ -180,4 +180,19 @@ HR szerepkör esetén van lehetőség álláshírdetésket létrehozni, ahol azt
 Jelentkező szerepkör esetén a létrehozott álláshiyrdetéseket látja a felhasználó, ahol le tudja adni a jelentkezését egy önéletrajz feltöltésével.
 
 
+## 9. hét
+Frissítettem az indítási útmutatót, hogy a ChromaDB Docker konténer névvel és perzisztens volume-mal induljon el, így az adatok újraindítás után is megmaradnak.
+
+Eddigi felvedezett UI hibákat javítottam. (pl.: Toggle button kikapcsolat állapotban is látszik már)
+
+Implementáltam egy rangsorolási funkciót, amely az álláshirdetés részletes oldalán érhető el. A „Rangsorolás" gombra kattintva a rendszer először a ChromaDB vektoros adatbázisból lekéri azokat a jelölteket, akiknek az önéletrajza el van tárolva, majd egy LLM segítségével rangsorolja őket az adott pozíció leírása alapján. Minden jelölt mellé rövid, 1-2 mondatos magyar indoklás is generálódik, hogy miért került arra a helyre.
+
+A rangsorolás eredménye egymás alatti, teljes szélességű kártyákon jelenik meg. Minden kártya tartalmazza a jelölt sorszámát (az első helyen lévő kiemelve), nevét, helyszínét, az LLM által generált indoklást, valamint a skill-jeit.
+
+Korábban az önéletrajzok véletlenszerű UUID-vel kerültek be a ChromaDB-be, ami miatt a rangsorolás során nem lehetett visszakötni az eredményeket az egyes jelöltekhez. Megoldottam, hogy minden új jelentkezésnél a CV szövege a Supabase-ben kiosztott application_id-vel tárolódik el a ChromaDB-ben, egy új /store-cv backend endpoint segítségével.
+
+Lehetőséget van mostmár az álláshirdetések törlésére a HR dashboardon.
+
+
+
 
