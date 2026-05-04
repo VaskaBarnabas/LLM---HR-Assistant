@@ -193,6 +193,34 @@ Korábban az önéletrajzok véletlenszerű UUID-vel kerültek be a ChromaDB-be,
 
 Lehetőséget van mostmár az álláshirdetések törlésére a HR dashboardon.
 
+## 10. hét
 
+Kibővítettem a rangsorolás funkcióját: az LLM mostantól először kinyeri az álláshirdetés leírásából az 5 legfontosabb követelményt, majd minden jelöltnél megjelöli, hogy teljesíti-e ezeket (true/false). Az eredmény a rangsorolási kártyákon checkbox-lista formájában jelenik meg. Zöld pipa ha a jelölt megfelel az adott kritériumnak, áthúzott szöveg ha nem. Emellett egy 1-2 mondatos indoklás is generálódik, amely konkrétan megnevezi, mit teljesít és mit nem az adott jelölt.
 
+Létrehoztam egy tesztkörnyezetet az anonimizáció automatikus ellenőrzéséhez. A tesztek a `tests/test_anonymization.py` fájlban találhatók, és 4 csoportba vannak szervezve:
+- **Egyenkénti filterek BE** (5 teszt): minden anonimizáló agent külön-külön kerül tesztelésre
+- **Egyenkénti filterek KI** (5 teszt): minden agent ki van kapcsolva, a többi fut – az adott tartalom megmarad
+- **Mind kikapcsolva** (1 teszt): ha minden filter ki van kapcsolva, a szöveg változatlan marad
+- **Kombinációk** (5 teszt): több filter egyidejű kombinációi
+
+A tesztek futtatásához egy `run_tests.sh` scriptet készítettem a projekt gyökerébe.
+
+**Az összes teszt futtatása:**
+```bash
+./run_tests.sh
+```
+
+**Egy konkrét teszt futtatása:**
+```bash
+./run_tests.sh test_names_only
+```
+
+**Az elérhető tesztek listázása:**
+```bash
+./run_tests.sh --list
+```
+
+A tesztek futtatásához szükséges, hogy a lokális LLM szolgáltatás (`http://localhost:12434`) elérhető legyen. Ha nem elérhető, a tesztek automatikusan átlépésre kerülnek egy figyelmeztető üzenettel.
+
+A tesztelés során kiderült, hogy az anonimizáló agentek promptjai túl általánosak voltak, és egymás területére léptek (pl. a névmás-agent a munkakörmegnevezéseket is semlegesítette, a családi állapot agent a névmásokat [PERSONAL DATA]-ra cserélte). Ezeket a promptokat pontosítottam, hogy minden agent kizárólag a saját feladatával foglalkozzon.
 

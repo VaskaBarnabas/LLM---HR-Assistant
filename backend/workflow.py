@@ -82,27 +82,36 @@ _PROMPTS = {
         "Output only the modified text."
     ),
     "pronouns": (
-        "You are a Pronoun and Reference Neutralization Agent. Scan the text for any "
-        "gender-specific pronouns (he, she, his, her, hers, him) or gendered references. "
-        "Replace them with gender-neutral alternatives such as 'they', 'their', 'them', or "
-        "'the candidate'. Pay special attention to citations or English-language sections within "
-        "the CV. In Hungarian context, look for phrases that function as gendered references. "
+        "You are a Pronoun Neutralization Agent. Your sole task is to replace gender-specific "
+        "pronouns with gender-neutral equivalents. Specifically: replace 'he', 'him', 'his', "
+        "'himself', 'she', 'her', 'hers', 'herself' with 'they', 'them', 'their', 'themselves', "
+        "or 'the candidate' where grammatically appropriate. "
+        "IMPORTANT: Do NOT change job titles, role names, or any nouns — only pronouns. "
+        "Do NOT change words like 'stewardess', 'fireman', 'chairman', 'mother', 'husband', etc. "
+        "In Hungarian context, replace gendered personal pronouns with gender-neutral equivalents. "
         "Output only the modified text."
     ),
     "family_status": (
-        "You are a Family Status Anonymization Agent. Identify and remove or neutralize any "
-        "information regarding marital status, parenthood, or family roles. This includes terms "
-        "like 'husband', 'wife', 'mother', 'father', 'maiden name', or 'married'. Replace these "
-        "phrases with '[PERSONAL DATA]' or rephrase the sentence to remove the gendered familial "
-        "context without losing the underlying professional timeline. Output only the modified text."
+        "You are a Family Status Anonymization Agent. Identify and remove or neutralize explicit "
+        "references to marital status and family roles. This includes terms like 'husband', 'wife', "
+        "'married', 'single', 'divorced', 'maiden name', 'children', 'son', 'daughter', 'father', "
+        "'mother', 'parent'. Replace these with '[PERSONAL DATA]' or rephrase to preserve the "
+        "professional timeline without the personal detail. "
+        "IMPORTANT: Do NOT replace gender pronouns (he, she, his, her, they, etc.). "
+        "Do NOT touch life-event terms like 'maternity leave', 'paternity leave', or 'career break' "
+        "— those are handled by a separate agent. "
+        "Output only the modified text."
     ),
     "life_events": (
-        "You are a Contextual Bias Removal Agent. Your task is to identify life events or social "
-        "experiences that indirectly reveal gender (e.g., 'maternity leave', 'paternity leave', "
-        "'military service', 'women\\'s choir', 'boy\\'s scout'). Neutralize these by using broader "
-        "professional terms such as 'career break', 'public service', or 'community organization'. "
-        "The goal is to preserve the timeframe and activity while removing the gendered nature of "
-        "the event. Output only the modified text."
+        "You are a Contextual Bias Removal Agent. Your task is to neutralize specific life events "
+        "that directly reveal gender. ONLY neutralize explicit gendered events such as: "
+        "'maternity leave', 'paternity leave', 'military service', 'women\\'s choir', 'boy\\'s scout', "
+        "'conscription', and similar explicitly gendered personal life events. "
+        "Replace them with neutral equivalents: 'career break', 'public service', 'community organization', etc., "
+        "preserving the timeframe and professional context. "
+        "IMPORTANT: Do NOT change job titles or professional role names (e.g., stewardess, fireman, actress). "
+        "Do NOT change pronouns. Only target the specific life-event terms listed above. "
+        "Output only the modified text."
     ),
 }
 
