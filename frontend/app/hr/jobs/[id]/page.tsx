@@ -23,7 +23,7 @@ export default function HRJobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [editingConfig, setEditingConfig] = useState(false)
   const [config, setConfig] = useState<AnonymizationConfig | null>(null)
-  const [rankings, setRankings] = useState<{ id: string; rank: number; name: string; skills: string[]; location: string; explanation: string }[] | null>(null)
+  const [rankings, setRankings] = useState<{ id: string; rank: number; name: string; skills: string[]; location: string; explanation: string; criteria: { label: string; met: boolean }[] }[] | null>(null)
   const [isRanking, setIsRanking] = useState(false)
 
   const load = useCallback(async () => {
@@ -194,6 +194,16 @@ export default function HRJobDetailPage() {
                       <div className="ranking-card-body">
                         <div className="ranking-card-name">{r.name}</div>
                         {r.location && <div className="ranking-card-location">{r.location}</div>}
+                        {r.criteria && r.criteria.length > 0 && (
+                          <div className="ranking-card-criteria">
+                            {r.criteria.map((cr, i) => (
+                              <div key={i} className={`criteria-item${cr.met ? ' met' : ' unmet'}`}>
+                                <span className="criteria-check">{cr.met ? '☑' : '☐'}</span>
+                                <span className="criteria-label">{cr.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {r.explanation && <div className="ranking-card-explanation">{r.explanation}</div>}
                       </div>
                       <div className="ranking-card-skills">

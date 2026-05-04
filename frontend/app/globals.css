@@ -495,6 +495,13 @@ body {
 .ranking-card-location { font-size: 0.75rem; color: var(--text-muted); }
 .ranking-card-explanation { font-size: 0.8rem; color: var(--text-sub); line-height: 1.5; margin-top: 4px; }
 .ranking-card-skills { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-self: flex-start; max-width: 220px; }
+.ranking-card-criteria { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; margin-bottom: 2px; }
+.criteria-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; line-height: 1.4; }
+.criteria-item.met .criteria-check { color: oklch(0.65 0.18 145); }
+.criteria-item.unmet .criteria-check { color: var(--text-muted); }
+.criteria-item.met .criteria-label { color: var(--text-sub); }
+.criteria-item.unmet .criteria-label { color: var(--text-muted); text-decoration: line-through; text-decoration-color: oklch(0.6 0.15 20 / 50%); }
+.criteria-check { font-size: 0.88rem; flex-shrink: 0; }
 .section-title {
   font-size: 13px;
   font-weight: 600;

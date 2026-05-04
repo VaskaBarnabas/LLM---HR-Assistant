@@ -159,21 +159,32 @@ async def rank_candidates(body: RankRequest):
 
     import re
     prompt = (
-        f"Te egy tapasztalt HR szakértő vagy. Rangsorold az alábbi jelölteket a megadott pozícióhoz "
-        f"legjobbtól leggyengébbig, és minden jelölthöz írj 1-2 mondatos magyar indoklást.\n\n"
+        f"Te egy tapasztalt HR szakértő vagy.\n\n"
         f"Pozíció: {body.job_title}\n"
         f"Leírás: {body.job_description or 'Nem megadott'}\n\n"
+        f"Feladatod:\n"
+        f"1. Azonosítsd a pozícióhoz szükséges 5 legfontosabb követelményt a leírás alapján. Legyenek tömörek (max 6 szó).\n"
+        f"2. Rangsorold az alábbi jelölteket legjobbtól leggyengébbig.\n"
+        f"3. Minden jelöltnél jelöld meg, hogy teljesíti-e az egyes követelményeket (true/false).\n"
+        f"4. Minden jelölthöz írj 1-2 mondatos magyar indoklást, amely konkrétan megnevezi, mit teljesít és mit nem.\n\n"
         f"Jelöltek:\n{candidates_text}\n\n"
-        f"Válaszolj kizárólag JSON tömbként, a legjobb jelölttől kezdve:\n"
-        f'[{{"id": "<jelölt id>", "explanation": "indoklás"}}, ...]\n'
-        f"Csak a JSON tömböt add vissza, semmi mást."
+        f"Válaszolj KIZÁRÓLAG ezzel a JSON struktúrával, semmi mással:\n"
+        f'{{\n'
+        f'  "criteria": ["1. követelmény", "2. követelmény", "3. követelmény", "4. követelmény", "5. követelmény"],\n'
+        f'  "rankings": [\n'
+        f'    {{"id": "<jelölt id>", "criteria_met": [true, false, true, true, false], "explanation": "indoklás"}}\n'
+        f'  ]\n'
+        f'}}'
     )
 
     try:
         resp = _rank_llm.invoke([HumanMessage(content=prompt)])
-        match = re.search(r'\[.*\]', resp.content, re.DOTALL)
-        parsed = json.loads(match.group()) if match else json.loads(resp.content)
+        match = re.search(r'\{.*\}', resp.content, re.DOTALL)
+        parsed_obj = json.loads(match.group()) if match else json.loads(resp.content)
+        criteria_labels: list[str] = parsed_obj.get("criteria", [])
+        parsed = parsed_obj.get("rankings", [])
     except Exception:
+        criteria_labels = []
         parsed = []
 
     seen: set[str] = set()
@@ -183,6 +194,7 @@ async def rank_candidates(body: RankRequest):
         if cid in id_to_candidate and cid not in seen:
             seen.add(cid)
             c = id_to_candidate[cid]
+            criteria_met: list[bool] = item.get("criteria_met", [])
             rankings.append({
                 "id": cid,
                 "rank": len(rankings) + 1,
@@ -190,6 +202,10 @@ async def rank_candidates(body: RankRequest):
                 "skills": c.skills,
                 "location": c.location,
                 "explanation": item.get("explanation", ""),
+                "criteria": [
+                    {"label": criteria_labels[i], "met": criteria_met[i] if i < len(criteria_met) else False}
+                    for i in range(len(criteria_labels))
+                ],
             })
         if len(rankings) >= 5:
             break
