@@ -224,3 +224,30 @@ A tesztek futtatásához szükséges, hogy a lokális LLM szolgáltatás (`http:
 
 A tesztelés során kiderült, hogy az anonimizáló agentek promptjai túl általánosak voltak, és egymás területére léptek (pl. a névmás-agent a munkakörmegnevezéseket is semlegesítette, a családi állapot agent a névmásokat [PERSONAL DATA]-ra cserélte). Ezeket a promptokat pontosítottam, hogy minden agent kizárólag a saját feladatával foglalkozzon.
 
+## 11. hét
+
+Kibővítettem a tesztelést RAGAS metrikák segítségével, amelyek számszerűen mérik a RAG-alapú rangsoroló rendszer minőségét. Két metrikát implementáltam:
+
+**Faithfulness** – Azt méri, hogy az LLM által generált rangsorolási indoklás valóban az önéletrajzban szereplő tényeken alapul-e, vagy „hallucinál". A metrika az indoklás állításait egyenként ellenőrzi a visszakeresett CV-szöveg alapján, és 0–1 skálán ad pontszámot. Két teszteset készült: egy CV-ből merített (helyes) és egy kitalált tényeket tartalmazó (hallucinált) indoklásra.
+
+**Relevancy (ContextRelevance)** – Azt méri, hogy a visszakeresett CV-szöveg mekkora hányada releváns az adott munkaköri leíráshoz képest. A metrika az LLM segítségével azonosítja a releváns mondatokat a CV-ben, és arányuk alapján számol pontszámot. Két teszteset készült: egy illeszkedő Python fejlesztői CV-re és egy teljesen eltérő területű (séf) CV-re.
+
+A tesztek a `tests/test_ragas_metrics.py` fájlban találhatók. A `run_tests.sh` scriptet is frissítettem az új parancsokkal:
+
+**RAGAS tesztek futtatása:**
+```bash
+./run_tests.sh --ragas
+```
+
+**Egy konkrét RAGAS teszt futtatása:**
+```bash
+./run_tests.sh --ragas test_faithfulness_grounded
+```
+
+**Minden teszt együtt (anonimizáció + RAGAS):**
+```bash
+./run_tests.sh --all
+```
+
+A megvalósítás során kiderült, hogy az `AnswerRelevancy` metrika nem alkalmas CV/állás illeszkedés mérésére, mivel minden professzionális önéletrajzból hasonló általános kérdéseket generál, és ezért a releváns és irreleváns CV-k pontszámai közel esnek egymáshoz. Helyette a `ContextRelevance` metrikát használtam, ami közvetlenül azt vizsgálja, hogy a visszakeresett szöveg mondatainak mekkora hányada releváns a kérdéshez – ez pontosabb és megbízhatóbb mérést ad a retrieval minőségére.
+
