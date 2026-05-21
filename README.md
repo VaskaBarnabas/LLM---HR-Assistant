@@ -251,3 +251,31 @@ A tesztek a `tests/test_ragas_metrics.py` fájlban találhatók. A `run_tests.sh
 
 A megvalósítás során kiderült, hogy az `AnswerRelevancy` metrika nem alkalmas CV/állás illeszkedés mérésére, mivel minden professzionális önéletrajzból hasonló általános kérdéseket generál, és ezért a releváns és irreleváns CV-k pontszámai közel esnek egymáshoz. Helyette a `ContextRelevance` metrikát használtam, ami közvetlenül azt vizsgálja, hogy a visszakeresett szöveg mondatainak mekkora hányada releváns a kérdéshez – ez pontosabb és megbízhatóbb mérést ad a retrieval minőségére.
 
+## 12. hét
+
+Beépítettem az anonimizáló pipeline-ba egy önellenőrző validációs lépést, amely minden CV feldolgozása után automatikusan megvizsgálja, hogy az aktív filterek valóban eltávolították-e a szükséges tartalmat.
+
+A validáció az adott önéletrajzhoz igazodik: az ellenőrzés előtt az eredeti szövegből kiszűri, hogy a tiltott minták (pl. `"stewardess"`, `"married"`, `" she "`, `"maternity leave"`) közül melyik szerepelt ténylegesen a CV-ben. Csak ezeket a konkrét mintákat ellenőrzi az anonimizált outputban – statikus, minden önéletrajzra egyforma tesztet nem futtat.
+
+Az ellenőrzött kategóriák és mintáik:
+- **gendered_nouns**: `stewardess`, `fireman`, `chairman`, `actress`, `waitress`, stb.
+- **pronouns**: ` he `, ` she `, ` his `, ` her `, ` himself `, ` herself `
+- **family_status**: `married`, `maiden name`
+- **life_events**: `maternity leave`, `paternity leave`
+
+Ha a validáció megbukik, az anonimizálás **automatikusan újraindul** az eredeti PDF szövegéből. Ez legfeljebb 3-szor próbálkozik; ha egyik kísérlet sem sikeres, a rendszer `422 Unprocessable Entity` hibával tér vissza, és a jelentkezés nem kerül mentésre.
+
+A jelentkezési oldalon (`/jobs/[id]/apply`) az önéletrajz feldolgozása közben egy shadcn/ui **Progress** sáv jelenik meg, amely lépésről lépésre tájékoztatja a felhasználót arról, hogy az AI éppen melyik anonimizálási feladaton dolgozik.
+
+A progress bar lassan, easing-gel halad 0-tól ~93%-ig, miközben a sáv alatt egy szöveges label frissül az aktuális lépés szerint:
+
+1. Önéletrajz feltöltése…
+2. Nevek anonimizálása…
+3. Nemi munkakörmegnevezések semlegesítése…
+4. Nemi névmások cseréje…
+5. Családi állapot eltávolítása…
+6. Nemi életesemények semlegesítése…
+7. Eredmény ellenőrzése és mentés…
+
+Amikor a szerver visszaküld egy választ (siker vagy hiba), a sáv 100%-ra ugrik, majd rövid késleltetés után megjelenik az eredmény oldal.
+
