@@ -5,8 +5,23 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { JobListing } from '@/lib/types'
+import { Progress } from '@/components/ui/progress'
 
 type Status = 'idle' | 'uploading' | 'success' | 'error' | 'already_applied'
+
+const STEPS = [
+  { label: 'Önéletrajz feltöltése…',                       until: 12 },
+  { label: 'Nevek anonimizálása…',                          until: 30 },
+  { label: 'Nemi munkakörmegnevezések semlegesítése…',      until: 48 },
+  { label: 'Nemi névmások cseréje…',                        until: 63 },
+  { label: 'Családi állapot eltávolítása…',                 until: 77 },
+  { label: 'Nemi életesemények semlegesítése…',             until: 89 },
+  { label: 'Eredmény ellenőrzése és mentés…',               until: 100 },
+]
+
+function getStepLabel(progress: number): string {
+  return (STEPS.find(s => progress < s.until) ?? STEPS[STEPS.length - 1]).label
+}
 
 export default function ApplyPage() {
   const { id } = useParams<{ id: string }>()
@@ -17,7 +32,20 @@ export default function ApplyPage() {
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [isDragging, setIsDragging] = useState(false)
+  const [progress, setProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (status !== 'uploading') return
+    setProgress(0)
+    const id = setInterval(() => {
+      setProgress(prev => {
+        const increment = Math.max(0.4, (93 - prev) / 18)
+        return Math.min(93, prev + increment)
+      })
+    }, 700)
+    return () => clearInterval(id)
+  }, [status])
 
   useEffect(() => {
     async function load() {
@@ -49,6 +77,9 @@ export default function ApplyPage() {
     try {
       const res = await fetch('/api/apply', { method: 'POST', body: formData })
       const data = await res.json()
+
+      setProgress(100)
+      await new Promise(r => setTimeout(r, 400))
 
       if (res.status === 409) {
         setStatus('already_applied')
@@ -151,6 +182,18 @@ export default function ApplyPage() {
               </div>
 
               {status === 'error' && <div className="auth-error">{errorMsg}</div>}
+
+              {status === 'uploading' && (
+                <div className="upload-progress">
+                  <div
+                    className="upload-progress-bar"
+                    style={{ '--primary': '#2563EB' } as React.CSSProperties}
+                  >
+                    <Progress value={progress} />
+                  </div>
+                  <div className="upload-progress-label">{getStepLabel(progress)}</div>
+                </div>
+              )}
 
               <div className="form-actions">
                 <Link href="/jobs" className="btn-ghost">Mégse</Link>
