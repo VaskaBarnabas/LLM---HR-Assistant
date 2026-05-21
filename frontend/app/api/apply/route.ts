@@ -48,8 +48,10 @@ export async function POST(request: NextRequest) {
   })
 
   if (!backendRes.ok) {
-    const text = await backendRes.text()
-    return NextResponse.json({ error: text }, { status: 500 })
+    const body = await backendRes.json().catch(() => null)
+    const errorMsg = body?.error ?? 'Hiba történt az anonimizálás során.'
+    const status = backendRes.status === 422 ? 422 : 500
+    return NextResponse.json({ error: errorMsg }, { status })
   }
 
   const result = await backendRes.json()

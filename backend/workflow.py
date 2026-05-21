@@ -151,16 +151,56 @@ _AGENT_ORDER: list[tuple[str, ChatOpenAI]] = [
 ]
 
 
-def anonymize_text(input_pdf: str, filters: dict | None = None) -> str:
-    """Run the anonymization agents sequentially, skipping any disabled by filters.
+# ---------------------------------------------------------------------------
+# Anonymization validation
+# ---------------------------------------------------------------------------
 
-    filters: dict with keys matching _PROMPTS; True = run, False = skip.
-    If filters is None or a key is missing, the agent runs by default.
-    """
-    if filters is None:
-        filters = {}
+class AnonymizationValidationError(RuntimeError):
+    pass
 
-    text = extract_pdf_text(input_pdf)
+
+# Known forbidden patterns per filter (lowercase).
+# Only patterns that actually appear in the original CV will be tested.
+_VALIDATION_CHECKS: dict[str, list[str]] = {
+    "gendered_nouns": [
+        "stewardess", "fireman", "firemen", "chairman", "chairmen",
+        "actress", "waitress", "salesman", "salesmen", "policeman",
+        "businessman", "businessmen", "spokesman", "spokesmen",
+    ],
+    "pronouns": [" he ", " she ", " his ", " her ", " himself ", " herself "],
+    "family_status": ["married", "maiden name"],
+    "life_events": ["maternity leave", "paternity leave"],
+}
+
+
+def _find_present_patterns(text: str, filters: dict) -> dict[str, list[str]]:
+    """Return only the forbidden patterns that actually appear in the original CV text."""
+    lo = text.lower()
+    targets: dict[str, list[str]] = {}
+    for key, patterns in _VALIDATION_CHECKS.items():
+        if filters.get(key, True):
+            found = [p for p in patterns if p in lo]
+            if found:
+                targets[key] = found
+    return targets
+
+
+def validate_anonymized_text(anonymized_text: str, targets: dict[str, list[str]]) -> None:
+    """Raise AnonymizationValidationError if any CV-specific targets still appear."""
+    lo = anonymized_text.lower()
+    violations = [
+        f"[{key}] '{pattern}' still present after anonymization"
+        for key, patterns in targets.items()
+        for pattern in patterns
+        if pattern in lo
+    ]
+    if violations:
+        raise AnonymizationValidationError(
+            "Anonymization validation failed:\n" + "\n".join(f"  • {v}" for v in violations)
+        )
+
+
+def _run_anonymization_pipeline(text: str, filters: dict) -> str:
     for i, (key, agent_llm) in enumerate(_AGENT_ORDER, 1):
         if filters.get(key, True):
             print(f"[Agent {i}/5] Running '{key}'...")
@@ -168,6 +208,39 @@ def anonymize_text(input_pdf: str, filters: dict | None = None) -> str:
         else:
             print(f"[Agent {i}/5] Skipping '{key}' (disabled by job config)")
     return text
+
+
+def anonymize_text(input_pdf: str, filters: dict | None = None, max_retries: int = 3) -> str:
+    """Run the anonymization agents sequentially with CV-specific validation and retry.
+
+    After each run, checks that patterns present in the original CV are gone.
+    Retries up to max_retries times before raising AnonymizationValidationError.
+    """
+    if filters is None:
+        filters = {}
+
+    original_text = extract_pdf_text(input_pdf)
+    targets = _find_present_patterns(original_text, filters)
+
+    last_error: AnonymizationValidationError | None = None
+    for attempt in range(1, max_retries + 1):
+        if attempt > 1:
+            print(f"[Anonymization] Retry attempt {attempt}/{max_retries}...")
+        result = _run_anonymization_pipeline(original_text, filters)
+
+        if not targets:
+            return result
+
+        print(f"[Validation] Checking anonymization result (attempt {attempt}/{max_retries})...")
+        try:
+            validate_anonymized_text(result, targets)
+            print(f"[Validation] Passed.")
+            return result
+        except AnonymizationValidationError as e:
+            last_error = e
+            print(f"[Validation] Failed: {e}")
+
+    raise last_error  # type: ignore[misc]
 
 
 def _esc(text: str) -> str:

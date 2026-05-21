@@ -6,11 +6,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
-from backend.workflow import chain, anonymized_text_to_html
+from backend.workflow import chain, anonymized_text_to_html, AnonymizationValidationError
 from backend.chromaClient import query as chroma_query, store_cv_with_id, rank_by_job
 
 _rank_llm = ChatOpenAI(
@@ -47,7 +48,10 @@ async def analyze(files: list[UploadFile] = File(...), filters: str = Form("{}")
         except Exception:
             filters_dict = {}
 
-        result_state = chain.invoke({"paths": tmp_paths, "filters": filters_dict, "anonymized_texts": [], "texts": [], "candidates": []})
+        try:
+            result_state = chain.invoke({"paths": tmp_paths, "filters": filters_dict, "anonymized_texts": [], "texts": [], "candidates": []})
+        except AnonymizationValidationError as e:
+            return JSONResponse(status_code=422, content={"error": str(e)})
         candidates = result_state["candidates"]
 
         anonymized_texts = result_state.get("anonymized_texts") or []
