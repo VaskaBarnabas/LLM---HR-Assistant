@@ -1,0 +1,171 @@
+================================================================================
+  TELEPÍTÉSI ÚTMUTATÓ – LLM HR Asszisztens
+================================================================================
+
+------------------------------------------------------------------------
+1. HASZNÁLT TECHNOLÓGIÁK ÉS VERZIÓK
+------------------------------------------------------------------------
+
+Futtatási környezet (fejlesztői gép):
+  OS: macOS (Darwin)
+
+Backend (Python):
+  Python             3.12.13
+  FastAPI            0.135.1
+  uvicorn            0.41.0
+  LangChain-community 0.4.1
+  LangChain-Google-GenAI 4.2.1
+  LangGraph          1.1.10
+  chromadb           1.5.5   (kliens könyvtár)
+  cohere             5.20.7
+  pypdf              6.8.0
+  PyMuPDF            1.27.2.2
+  Pillow             12.1.1
+  python-dotenv      1.2.2
+
+Frontend:
+  Node.js            24.13.1
+  Next.js            ~16.2.4
+  React              19.2.3
+  TypeScript         5.x
+  Tailwind CSS       4.x
+  @supabase/supabase-js 2.103.3
+  @supabase/ssr      0.10.2
+  Radix UI           1.4.3
+  shadcn/ui komponensek (Progress, Card, Button, stb.)
+
+Vektoros adatbázis (Docker):
+  Docker             29.4.2
+  ChromaDB image     chromadb/chroma:1.0.0
+
+Felhőszolgáltatások:
+  Supabase (auth + PostgreSQL adatbázis, felhőalapú)
+  Google Gemini API  (LLM – gemini-* modellek)
+  Cohere API         (ChromaDB embedding)
+
+Lokális LLM (opcionális, anonimizáláshoz):
+  Docker-ben futtatott Gemma 4 (gemma4:e4b variáns)
+  Alapértelmezett cím: http://localhost:12434
+
+
+------------------------------------------------------------------------
+2. KONFIGURÁLHATÓ VÁLTOZÓK
+------------------------------------------------------------------------
+
+### Szerver oldal – backend/.env
+
+  GEMINI_API_KEY=<Google Gemini API kulcs>
+  CHROMA_COHERE_API_KEY=<Cohere API kulcs>
+
+  A Gemini API kulcs a Google AI Studio-ban generálható:
+    https://aistudio.google.com/app/apikey
+  A Cohere API kulcs a Cohere Dashboard-on generálható:
+    https://dashboard.cohere.com/api-keys
+
+### Frontend oldal – frontend/.env.local
+
+  BACKEND_URL=http://localhost:8001
+    (A Python backend URL-je; szükség szerint módosítható)
+
+  NEXT_PUBLIC_SUPABASE_URL=<Supabase projekt URL>
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Supabase publishable API kulcs>
+
+  A Supabase értékek a Supabase projekt Settings > API oldalán találhatók.
+
+### ChromaDB Docker konfiguráció
+
+  Az adatbázis egy Docker konténerben fut, perzisztens volume-mal.
+  Port: 8000 (belső), 8000 (host)
+
+  Első indítás (konténer létrehozása):
+    docker run -d --name chroma -p 8000:8000 -v chroma-data:/chroma/chroma chromadb/chroma:1.0.0
+
+  Minden további indítás:
+    docker start chroma
+
+### Lokális LLM (anonimizáláshoz)
+
+  A rendszer az anonimizáláshoz a http://localhost:12434 címen futó
+  lokális LLM szolgáltatást hívja. Ha ez nem elérhető, az anonimizálás
+  nem fog működni.
+
+
+------------------------------------------------------------------------
+3. TELEPÍTÉS ÉS INDÍTÁS
+------------------------------------------------------------------------
+
+3.1 Python virtuális környezet
+
+  python3.12 -m venv .venv
+  source .venv/bin/activate
+  pip install chromadb cohere fastapi uvicorn python-multipart \
+              langchain-community langchain-google-genai langgraph \
+              pypdf pillow python-dotenv pymupdf
+
+3.2 ChromaDB konténer indítása
+
+  docker start chroma
+  (Első alkalommal: lásd fent a docker run parancsot)
+
+3.3 Python backend indítása (a projekt gyökeréből)
+
+  uvicorn backend.backend:app --port 8001 --reload
+
+3.4 Next.js frontend indítása
+
+  cd frontend
+  npm install
+  npm run dev
+
+  Az alkalmazás elérhető: http://localhost:3000
+
+3.5 Tesztek futtatása (opcionális)
+
+  ./run_tests.sh              # anonimizációs tesztek
+  ./run_tests.sh --ragas      # RAGAS metrika tesztek
+  ./run_tests.sh --all        # minden teszt
+
+  A tesztekhez szükséges a lokális LLM (http://localhost:12434).
+
+
+------------------------------------------------------------------------
+4. TESZT ÉS ADMIN FELHASZNÁLÓ
+------------------------------------------------------------------------
+
+Az autentikációt a Supabase kezeli, nincs lokálisan tárolt jelszó.
+
+Felhasználók regisztrálhatók az alkalmazáson belül:
+  http://localhost:3000/register
+
+Elérhető szerepkörök:
+  - HR        : álláshirdetések létrehozása, törlése, jelentkezők megtekintése,
+                önéletrajzok rangsorolása
+  - Applicant : álláshirdetések megtekintése, jelentkezés CV feltöltésével
+
+Teszt felhasználók (Supabase-ben regisztráltak):
+  HR szerepkör:
+    Email:    hr@test.com
+    Jelszó:   hrtest123
+
+  Jelentkező szerepkör:
+    Email:    applicant@test.com
+    Jelszó:   applicanttest123
+
+  Ha a fenti fiókok nem léteznek, hozd létre őket a regisztrációs oldalon
+  (http://localhost:3000/register), a megfelelő szerepkör kiválasztásával.
+
+
+------------------------------------------------------------------------
+5. MEGJEGYZÉSEK
+------------------------------------------------------------------------
+
+- A backend és a frontend külön folyamatban fut; mindkettőt el kell indítani.
+- A ChromaDB Docker konténernek futnia kell a backend indítása előtt.
+- Az anonimizáló funkció a lokális LLM-et igényli (http://localhost:12434).
+  Ha ez nincs elindítva, a CV feltöltés anonimizálás nélküli módban vagy
+  hibával tér vissza.
+- A Supabase adatbázis sémáját (táblák: profiles, job_listings, applications)
+  a Supabase projektben kell létrehozni; a migrációs SQL fájl nincs
+  jelen a repóban – a táblák struktúrája az alkalmazás kódjából olvasható ki.
+
+================================================================================
